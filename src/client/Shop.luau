@@ -6,6 +6,16 @@ local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local buyRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("BuyHarpoon")
+local MarketplaceService = game:GetService("MarketplaceService")
+
+local function passFor(key)
+	for _, p in Config.Robux.Passes do
+		if p.key == key then
+			return p
+		end
+	end
+	return nil
+end
 
 local Shop = {}
 
@@ -173,6 +183,10 @@ function Shop.start()
 			elseif owned then
 				b.Text = "EQUIP"
 				b.BackgroundColor3 = Color3.fromRGB(40, 150, 220)
+			elseif row.def.pass then
+				local pass = passFor(row.def.pass)
+				b.Text = (pass and pass.id ~= 0) and "R$ PASS" or "SOON"
+				b.BackgroundColor3 = Color3.fromRGB(0, 160, 90)
 			elseif level < (row.def.level or 1) then
 				b.Text = "LEVEL " .. row.def.level
 				b.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
@@ -185,6 +199,16 @@ function Shop.start()
 
 	for id, row in rows do
 		row.button.MouseButton1Click:Connect(function()
+			-- Robux-only guns open the Roblox purchase prompt
+			if row.def.pass and not player:GetAttribute("Own_" .. id) then
+				local pass = passFor(row.def.pass)
+				if pass and pass.id ~= 0 then
+					MarketplaceService:PromptGamePassPurchase(player, pass.id)
+				else
+					status.Text = "Not on sale yet."
+				end
+				return
+			end
 			local ok, msg = buyRemote:InvokeServer(id)
 			status.Text = msg or ""
 			status.TextColor3 = ok and Color3.fromRGB(120, 255, 150) or Color3.fromRGB(255, 120, 120)

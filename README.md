@@ -71,6 +71,20 @@ Or, with `rojo serve` running and connected, just `git pull` and Studio updates 
 
 To test PvP on your own: in Studio's **Test** tab, choose **Clients and Servers** with 2 players and press **Start**. Two game windows open and you can shoot each other.
 
+## Robux shop
+
+There's an **R$ SHOP** button on the left of the screen. It sells:
+- **Developer products** (can be bought again and again): Pouch of Cash ($500), Chest of Cash ($2,500), Treasure Hoard ($10,000), Double XP for 30 minutes
+- **Passes** (yours forever): Double Cash, Big Oxygen Tank, Golden Harpoon (an exclusive gun, which also shows in the gun shop)
+
+To switch them on:
+1. Publish the game
+2. On create.roblox.com, open the game and go to **Monetization → Developer Products**. Create the 4 products and set their prices
+3. Go to **Monetization → Passes**. Create the 3 passes, set their prices and put them **on sale**
+4. Copy each ID into `Config.Robux` in `src/shared/Config.luau`, then rebuild and publish again
+
+Anything with ID `0` shows as "SOON". Prices in the shop come straight from Roblox, so change them on the website, not in code.
+
 ## Sounds
 
 The thunder, squid sting and storm drone use built-in placeholder sounds. To swap in better ones, open `src/shared/Config.luau` and fill in `Config.Sounds`. Find sounds in Studio under Toolbox > Creator Store > Audio, right-click one, choose Copy Asset ID, and paste it as `"rbxassetid://123456"`. Rain and seagulls are silent until you add an ID.
@@ -87,7 +101,9 @@ Most numbers are in `src/shared/Config.luau`: creature health and rewards, shark
 | `src/server/Creatures.luau` | Huntable fish, sharks and the giant squid: models, AI, health |
 | `src/server/Harpoons.luau` | Harpoon guns, shooting, buying |
 | `src/server/Coins.luau` | Coin drops and pickup |
-| `src/server/PlayerStats.luau` | Money, pearls, oxygen, saving |
+| `src/server/PlayerStats.luau` | Money, pearls, XP, kills, oxygen, saving |
+| `src/server/Monetization.luau` | Robux purchases and passes |
+| `src/client/RobuxShop.luau` | The R$ shop window |
 | `src/client/Weapons.luau` | Aiming, shot effects, damage numbers |
 | `src/client/Shop.luau` | The shop menu |
 | `src/client/CreatureAnim.luau` | Tail and tentacle wiggles, spinning coins |

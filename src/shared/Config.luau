@@ -58,6 +58,25 @@ function Config.inSafeZone(pos: Vector3)
 	return Vector3.new(pos.X, 0, pos.Z).Magnitude < Config.PvP.safeRadius and pos.Y > Config.Surface - 6
 end
 
+-- Robux shop. Create these on create.roblox.com once the game is published
+-- (your game > Monetization > Developer Products / Passes), then paste each ID here.
+-- Anything left at 0 shows as "coming soon" in the shop.
+Config.Robux = {
+	-- Developer Products: can be bought again and again
+	Products = {
+		{ key = "CashSmall", id = 0, name = "Pouch of Cash", desc = "$500 to spend at the gun shop", cash = 500 },
+		{ key = "CashMedium", id = 0, name = "Chest of Cash", desc = "$2,500 to spend at the gun shop", cash = 2500 },
+		{ key = "CashLarge", id = 0, name = "Treasure Hoard", desc = "$10,000 to spend at the gun shop", cash = 10000 },
+		{ key = "XPBoost", id = 0, name = "Double XP (30 min)", desc = "All XP counts twice for 30 minutes", xpBoostMinutes = 30 },
+	},
+	-- Passes: bought once, kept forever
+	Passes = {
+		{ key = "DoubleCash", id = 0, name = "Double Cash", desc = "Every coin you pick up is worth 2x, forever" },
+		{ key = "BigTank", id = 0, name = "Big Oxygen Tank", desc = "Your oxygen lasts twice as long" },
+		{ key = "GoldenHarpoon", id = 0, name = "Golden Harpoon", desc = "An exclusive gold gun with splash damage" },
+	},
+}
+
 -- Sounds. Leave "" to use the built-in placeholder sound.
 -- To use a better one: in Studio open Toolbox > Creator Store > Audio, search
 -- (e.g. "thunder", "heavy rain", "horror sting", "sea monster", "seagulls"),
@@ -260,6 +279,8 @@ Config.Harpoons = {
 		damage = 90, cooldown = 1.4, range = 110, speed = 65, colour = Color3.fromRGB(255, 140, 40), look = "torpedo", splash = 14, bolt = 0.8 },
 	{ id = "Legendary", name = "Kraken Slayer", rarity = "Legendary", level = 18, price = 2000,
 		damage = 110, cooldown = 0.25, range = 120, speed = 200, colour = Color3.fromRGB(255, 200, 50), look = "harpoon", splash = 10 },
+	{ id = "Golden", name = "Golden Harpoon", rarity = "Exclusive", level = 1, price = 0, pass = "GoldenHarpoon",
+		damage = 60, cooldown = 0.35, range = 110, speed = 200, colour = Color3.fromRGB(255, 215, 0), look = "harpoon", splash = 6 },
 	{ id = "Trident", name = "Storm Trident", rarity = "Legendary", level = 25, price = 3500,
 		damage = 85, cooldown = 0.4, range = 110, speed = 260, colour = Color3.fromRGB(150, 200, 255), look = "trident", chain = 3 },
 	{ id = "Leviathan", name = "Leviathan Cannon", rarity = "Mythic", level = 35, price = 6000,

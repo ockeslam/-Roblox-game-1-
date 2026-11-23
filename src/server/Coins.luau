@@ -61,7 +61,7 @@ function Coins.start()
 				local hum = char and char:FindFirstChildOfClass("Humanoid")
 				local stats = player:FindFirstChild("leaderstats")
 				if hrp and hum and hum.Health > 0 and stats then
-					table.insert(collectors, { hrp = hrp, money = stats:FindFirstChild("Money") })
+					table.insert(collectors, { hrp = hrp, money = stats:FindFirstChild("Money"), player = player })
 				end
 			end
 
@@ -69,7 +69,9 @@ function Coins.start()
 				local picked = false
 				for _, c in collectors do
 					if c.money and (c.hrp.Position - coin.Position).Magnitude < Config.CoinPickupRange then
-						c.money.Value += coin:GetAttribute("Value") or 1
+						-- the Double Cash pass doubles every coin
+						local mult = c.player:GetAttribute("Pass_DoubleCash") and 2 or 1
+						c.money.Value += (coin:GetAttribute("Value") or 1) * mult
 						picked = true
 						break
 					end

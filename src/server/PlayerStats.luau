@@ -112,6 +112,10 @@ function PlayerStats.addXP(player, amount)
 	if not player or not player.Parent or amount <= 0 then
 		return
 	end
+	-- Double XP boost from the Robux shop
+	if os.time() < (player:GetAttribute("XPBoostUntil") or 0) then
+		amount *= 2
+	end
 	local level = player:GetAttribute("Level") or 1
 	local xp = (player:GetAttribute("XP") or 0) + amount
 	while level < Config.MaxLevel and xp >= Config.xpToNext(level) do
@@ -202,7 +206,8 @@ local function oxygenLoop()
 				local o = player:GetAttribute("Oxygen") or 100
 				local deep = Config.inDeep(head.Position)
 				if head.Position.Y < Config.Surface - 1 then
-					o -= 100 / Config.OxygenSeconds * dt * (deep and Config.Deep.oxygenDrain or 1)
+					local tank = player:GetAttribute("Pass_BigTank") and 0.5 or 1
+					o -= 100 / Config.OxygenSeconds * dt * (deep and Config.Deep.oxygenDrain or 1) * tank
 				else
 					o += Config.OxygenRefillPerSecond * dt
 				end

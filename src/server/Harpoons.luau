@@ -347,6 +347,9 @@ local function onBuy(player, id)
 		return false, "That gun doesn't exist."
 	end
 	if not player:GetAttribute("Own_" .. id) then
+		if def.pass then
+			return false, "This one is bought with Robux."
+		end
 		if (player:GetAttribute("Level") or 1) < (def.level or 1) then
 			return false, "You need to be level " .. def.level .. " for that."
 		end
