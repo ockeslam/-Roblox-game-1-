@@ -8,8 +8,8 @@ An underwater Roblox game. You spawn on a raft in a lagoon in the middle of a tr
 - **The reef:** branching coral, brain coral, sea fans, tube coral, anemones, starfish, and kelp forests that sway
 - **Hunting:** 15+ species you can shoot, each with a rarity from 1 (Common) to 5 (Legendary). Rarer catches have more health but drop more coins and XP. Their name and stars show above them when hit. Harpoons have a slight aim assist
   - Common: sardine, snapper, mackerel, damselfish, crab, jellyfish
-  - Uncommon: clownfish, parrotfish, butterflyfish, pufferfish
-  - Rare: grouper, tuna, barracuda, lionfish, king crab
+  - Uncommon: clownfish, parrotfish, butterflyfish, angelfish, pufferfish
+  - Rare: grouper, tuna, barracuda, triggerfish, lionfish, king crab
   - Epic: mahi-mahi (rarely dashes at you at huge speed), swordfish, shark
   - Legendary: ocean sunfish, golden fish, giant squid
 - **Levels:** earn XP from kills and pearls. Each level makes creatures tougher and hit harder for you, but they pay more. Every 3 levels another shark joins the lagoon, and the squid hunts more often

@@ -62,7 +62,7 @@ end
 -- body = fish size, colours = {main, second}. Optional looks: stripes, spikes, spines, bill, mahi, sunfish, glow.
 Config.Creatures = {
 	---------------- Rarity 1: Common
-	Sardine = { type = "Fish", rarity = 1, count = 10, healthMult = 0.7, speed = 8, fleeSpeed = 15, respawn = 15,
+	Sardine = { type = "Fish", rarity = 1, count = 8, healthMult = 0.7, speed = 8, fleeSpeed = 15, respawn = 15,
 		body = Vector3.new(0.5, 0.8, 2.2), colours = { rgb(190, 200, 215), rgb(235, 240, 245) } },
 	Snapper = { type = "Fish", rarity = 1, count = 14, speed = 7, fleeSpeed = 13, respawn = 15,
 		body = Vector3.new(0.9, 1.5, 3), colours = { rgb(230, 90, 70), rgb(255, 190, 160) } },
@@ -72,40 +72,44 @@ Config.Creatures = {
 		body = Vector3.new(0.6, 1.2, 2), colours = { rgb(40, 90, 255), rgb(120, 200, 255) } },
 	Crab = { type = "Crab", rarity = 1, count = 10, size = 1, speed = 3, fleeSpeed = 7, respawn = 20,
 		colours = { rgb(220, 70, 40), rgb(240, 150, 110) } },
-	Jellyfish = { type = "Jelly", rarity = 1, count = 14, healthMult = 0.7, speed = 2, respawn = 25,
+	Jellyfish = { type = "Jelly", rarity = 1, count = 12, healthMult = 0.7, speed = 2, respawn = 25,
 		sting = 10, -- damage if you swim into one
 		shootSting = 6, -- damage you take for shooting one
 		stingRange = 4, stingCooldown = 1.5,
 		colours = { rgb(255, 140, 220), rgb(170, 140, 255), rgb(120, 230, 255) } },
 
 	---------------- Rarity 2: Uncommon
-	Clownfish = { type = "Fish", rarity = 2, count = 10, speed = 5, fleeSpeed = 12, respawn = 20,
+	Clownfish = { type = "Fish", rarity = 2, count = 14, speed = 5, fleeSpeed = 12, respawn = 20,
 		body = Vector3.new(0.8, 1.2, 2.4), colours = { rgb(255, 120, 20), rgb(255, 255, 255) }, stripes = 3 },
-	Parrotfish = { type = "Fish", rarity = 2, count = 10, speed = 6, fleeSpeed = 12, respawn = 20,
+	Parrotfish = { type = "Fish", rarity = 2, count = 12, speed = 6, fleeSpeed = 12, respawn = 20,
 		body = Vector3.new(1.1, 1.8, 3.4), colours = { rgb(40, 200, 180), rgb(255, 120, 200) } },
-	Butterflyfish = { type = "Fish", rarity = 2, count = 10, speed = 5, fleeSpeed = 12, respawn = 20,
+	Butterflyfish = { type = "Fish", rarity = 2, count = 12, speed = 5, fleeSpeed = 12, respawn = 20,
 		body = Vector3.new(0.45, 2.2, 2.2), colours = { rgb(255, 220, 40), rgb(255, 250, 220) }, stripes = 1, stripeColour = rgb(30, 30, 30) },
-	Pufferfish = { type = "Fish", rarity = 2, count = 6, healthMult = 1.3, speed = 3, fleeSpeed = 7, respawn = 25,
+	Angelfish = { type = "Fish", rarity = 2, count = 12, speed = 5, fleeSpeed = 12, respawn = 20,
+		body = Vector3.new(0.4, 2.6, 2.4), colours = { rgb(90, 110, 255), rgb(255, 220, 60) }, stripes = 2, stripeColour = rgb(255, 220, 60) },
+	Pufferfish = { type = "Fish", rarity = 2, count = 8, healthMult = 1.3, speed = 3, fleeSpeed = 7, respawn = 25,
 		body = Vector3.new(1.6, 1.6, 2.2), colours = { rgb(200, 180, 120), rgb(245, 240, 220) }, spikes = true },
 
 	---------------- Rarity 3: Rare
-	Grouper = { type = "Fish", rarity = 3, count = 6, speed = 5, fleeSpeed = 10, respawn = 30,
+	Grouper = { type = "Fish", rarity = 3, count = 8, speed = 5, fleeSpeed = 10, respawn = 30,
 		body = Vector3.new(1.6, 2.2, 4.5), colours = { rgb(120, 95, 70), rgb(205, 175, 125) } },
-	Tuna = { type = "Fish", rarity = 3, count = 6, speed = 10, fleeSpeed = 15, respawn = 30,
+	Tuna = { type = "Fish", rarity = 3, count = 8, speed = 10, fleeSpeed = 15, respawn = 30,
 		body = Vector3.new(1.4, 2, 5.5), colours = { rgb(40, 60, 120), rgb(200, 210, 225) } },
-	Barracuda = { type = "Fish", rarity = 3, count = 6, speed = 9, fleeSpeed = 17, respawn = 30,
+	Barracuda = { type = "Fish", rarity = 3, count = 8, speed = 9, fleeSpeed = 17, respawn = 30,
 		body = Vector3.new(0.8, 1.2, 6.5), colours = { rgb(150, 160, 175), rgb(220, 225, 235) } },
-	Lionfish = { type = "Fish", rarity = 3, count = 5, speed = 4, fleeSpeed = 9, respawn = 30,
+	Triggerfish = { type = "Fish", rarity = 3, count = 6, healthMult = 1.2, speed = 5, fleeSpeed = 11, respawn = 30,
+		body = Vector3.new(1, 1.9, 3.2), colours = { rgb(60, 60, 70), rgb(255, 200, 60) }, stripes = 2, stripeColour = rgb(250, 250, 250) },
+	Lionfish = { type = "Fish", rarity = 3, count = 6, speed = 4, fleeSpeed = 9, respawn = 30,
 		body = Vector3.new(1, 1.6, 3), colours = { rgb(190, 60, 40), rgb(255, 255, 255) }, stripes = 4, spines = true },
 	KingCrab = { type = "Crab", rarity = 3, count = 3, size = 1.8, speed = 2, fleeSpeed = 5, respawn = 45,
 		colours = { rgb(150, 40, 90), rgb(230, 120, 150) } },
 
 	---------------- Rarity 4: Epic
-	MahiMahi = { type = "Fish", rarity = 4, count = 4, speed = 10, fleeSpeed = 18, respawn = 45,
+	MahiMahi = { type = "Fish", rarity = 4, count = 5, speed = 10, fleeSpeed = 18, respawn = 45,
 		body = Vector3.new(1.2, 2.4, 6), colours = { rgb(60, 180, 90), rgb(240, 210, 60) }, mahi = true,
 		-- rarely darts at you at huge speed
 		dash = { chance = 0.05, speed = 38, damage = 12, range = 35, cooldown = 15 } },
-	Swordfish = { type = "Fish", rarity = 4, count = 3, speed = 11, fleeSpeed = 20, respawn = 45,
+	Swordfish = { type = "Fish", rarity = 4, count = 4, speed = 11, fleeSpeed = 20, respawn = 45,
 		body = Vector3.new(1.2, 2, 7), colours = { rgb(40, 50, 90), rgb(190, 200, 215) }, bill = 4 },
 	Shark = { type = "Shark", rarity = 4, count = 4, healthMult = 1.8, respawn = 60,
 		speed = 9, chaseSpeed = 14, -- players swim at 16, so you can just about outswim them

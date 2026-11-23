@@ -843,9 +843,13 @@ local function spawnPoint(def)
 		return Vector3.new(p.X, rng:NextNumber(25, S - 15), p.Z)
 	end
 	if def.type == "Fish" then
-		local centres = Config.reefCenters()
-		local c = centres[rng:NextInteger(1, #centres)]
-		return Vector3.new(c.X + rng:NextNumber(-20, 20), rng:NextNumber(10, 28), c.Z + rng:NextNumber(-20, 20))
+		if rng:NextNumber() < 0.6 then
+			local centres = Config.reefCenters()
+			local c = centres[rng:NextInteger(1, #centres)]
+			return Vector3.new(c.X + rng:NextNumber(-25, 25), rng:NextNumber(10, 30), c.Z + rng:NextNumber(-25, 25))
+		end
+		local p = Config.randomInLagoon(rng, 30)
+		return Vector3.new(p.X, rng:NextNumber(12, S - 15), p.Z)
 	end
 	local p = point(18, S - 12)
 	for _ = 1, 20 do
@@ -940,7 +944,12 @@ function Creatures.damage(model, amount, player)
 			Remotes.Announce:FireAllClients(who .. " slew the Giant Squid!")
 		end
 		model:Destroy()
-		task.delay(rec.def.respawn, Creatures.spawn, rec.kind)
+		task.delay(rec.def.respawn, function()
+			local ok, err = pcall(Creatures.spawn, rec.kind)
+			if not ok then
+				warn("[Reef Dive] couldn't respawn " .. rec.kind .. ": " .. tostring(err))
+			end
+		end)
 		return true
 	end
 	return false
@@ -971,11 +980,20 @@ function Creatures.start()
 	folder = Instance.new("Folder")
 	folder.Name = "Creatures"
 	folder.Parent = workspace
+	-- spawn every species separately, so a problem with one can't stop the rest
+	local total = 0
 	for kind, def in Config.Creatures do
-		for _ = 1, def.count do
-			Creatures.spawn(kind)
+		local ok, err = pcall(function()
+			for _ = 1, def.count do
+				Creatures.spawn(kind)
+				total += 1
+			end
+		end)
+		if not ok then
+			warn("[Reef Dive] couldn't spawn " .. kind .. ": " .. tostring(err))
 		end
 	end
+	print("[Reef Dive] spawned " .. total .. " creatures")
 
 	-- every 3 levels the strongest diver reaches, another shark joins (up to 6 extra)
 	task.spawn(function()
