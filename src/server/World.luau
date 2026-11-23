@@ -37,6 +37,7 @@ local LEAF_COLOURS = {
 }
 
 local islets = {}
+local hutPos = nil
 
 local function pick(list)
 	return list[rng:NextInteger(1, #list)]
@@ -212,6 +213,13 @@ local function buildLighting()
 	bloom.Threshold = 1.5
 	bloom.Parent = Lighting
 
+	-- a few fair-weather clouds (the storm thickens them up)
+	local clouds = terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+	clouds.Cover = 0.45
+	clouds.Density = 0.35
+	clouds.Color = Color3.new(1, 1, 1)
+	clouds.Parent = terrain
+
 	terrain.WaterColor = Color3.fromRGB(25, 140, 165)
 	terrain.WaterTransparency = 0.85
 	terrain.WaterReflectance = 0.4
@@ -284,7 +292,8 @@ local function scatterPalms(parent)
 		local r = rng:NextNumber(R + 36, R + 140)
 		local x, z = math.cos(a) * r, math.sin(a) * r
 		local y = floorAt(x, z)
-		if y > S + 1.5 and y < S + 25 then
+		local nearHut = hutPos and (Vector3.new(x, 0, z) - hutPos).Magnitude < 20
+		if y > S + 1.5 and y < S + 25 and not nearHut then
 			buildPalm(Vector3.new(x, y - 0.5, z), parent)
 			placed += 1
 		end
@@ -320,6 +329,182 @@ local function volcanoSmoke()
 	glow.Range = 40
 	glow.Brightness = 3
 	glow.Parent = top
+end
+
+---------------------------------------------------------------- beach hut with a balcony
+local WOOD = Color3.fromRGB(150, 110, 70)
+local DARK_WOOD = Color3.fromRGB(105, 75, 45)
+
+local function beachSpot()
+	-- look round the lagoon for a flat bit of sandy beach, starting on the side facing the raft spawn
+	for step = 0, 120 do
+		local a = math.pi / 2 + (step % 2 == 0 and 1 or -1) * math.floor((step + 1) / 2) * 0.05
+		local inner = Vector3.new(math.cos(a) * (R + 44), 0, math.sin(a) * (R + 44))
+		local mid = Vector3.new(math.cos(a) * (R + 52), 0, math.sin(a) * (R + 52))
+		local outer = Vector3.new(math.cos(a) * (R + 60), 0, math.sin(a) * (R + 60))
+		local y1, y2, y3 = floorAt(inner.X, inner.Z), floorAt(mid.X, mid.Z), floorAt(outer.X, outer.Z)
+		if y1 > S + 0.5 and y2 > S + 0.5 and y3 > S + 0.5 and math.max(y1, y2, y3) - math.min(y1, y2, y3) < 6 then
+			return a
+		end
+	end
+	return math.pi / 2
+end
+
+local function buildBeachHut(parent)
+	local model = Instance.new("Model")
+	model.Name = "BeachHut"
+	local a = beachSpot()
+	local centre = Vector3.new(math.cos(a) * (R + 52), 0, math.sin(a) * (R + 52))
+	hutPos = centre
+
+	-- deck height: a few studs above the highest sand under it
+	local highest = S
+	for _, off in { Vector3.new(-11, 0, -8), Vector3.new(11, 0, -8), Vector3.new(-11, 0, 8), Vector3.new(11, 0, 8), Vector3.zero } do
+		local flat = CFrame.lookAt(centre, Vector3.zero) * off
+		highest = math.max(highest, floorAt(flat.X, flat.Z))
+	end
+	local deckY = highest + 6
+	-- the front (-Z) looks out over the lagoon
+	local cf = CFrame.lookAt(Vector3.new(centre.X, deckY, centre.Z), Vector3.new(0, deckY, 0))
+
+	local function part(props)
+		props.Material = props.Material or Enum.Material.WoodPlanks
+		props.Color = props.Color or WOOD
+		return Build.part(props, model)
+	end
+
+	-- deck
+	part({ Size = Vector3.new(22, 1, 16), CFrame = cf })
+
+	-- stilts down into the sand
+	for _, x in { -10.5, 0, 10.5 } do
+		for _, z in { -7.5, 7.5 } do
+			local top = (cf * CFrame.new(x, -0.5, z)).Position
+			local ground = floorAt(top.X, top.Z)
+			Build.cylinderBetween(Vector3.new(top.X, ground - 3, top.Z), top, 0.9, {
+				Color = DARK_WOOD,
+				Material = Enum.Material.Wood,
+			}, model)
+		end
+	end
+
+	-- railings on the front and sides
+	local function rail(fromLocal, toLocal)
+		local a1 = (cf * CFrame.new(fromLocal)).Position
+		local b1 = (cf * CFrame.new(toLocal)).Position
+		local len = (b1 - a1).Magnitude
+		local posts = math.max(1, math.floor(len / 2.75))
+		for i = 0, posts do
+			local p = a1:Lerp(b1, i / posts)
+			part({ Size = Vector3.new(0.4, 3, 0.4), CFrame = CFrame.new(p + Vector3.new(0, 2, 0)), Color = DARK_WOOD, Material = Enum.Material.Wood })
+		end
+		part({
+			Size = Vector3.new(0.4, 0.3, len),
+			CFrame = CFrame.lookAt((a1 + b1) / 2 + Vector3.new(0, 3.4, 0), b1 + Vector3.new(0, 3.4, 0)),
+			Color = DARK_WOOD,
+			Material = Enum.Material.Wood,
+		})
+		part({
+			Size = Vector3.new(0.25, 0.25, len),
+			CFrame = CFrame.lookAt((a1 + b1) / 2 + Vector3.new(0, 2, 0), b1 + Vector3.new(0, 2, 0)),
+			Color = DARK_WOOD,
+			Material = Enum.Material.Wood,
+		})
+	end
+	rail(Vector3.new(-10.8, 0, -7.8), Vector3.new(10.8, 0, -7.8)) -- front
+	rail(Vector3.new(10.8, 0, -7.8), Vector3.new(10.8, 0, 7.8)) -- right side
+	rail(Vector3.new(-10.8, 0, -7.8), Vector3.new(-10.8, 0, 0)) -- left side, with a gap for the stairs
+
+	-- stairs down the left side to the sand
+	local stairTop = cf * CFrame.new(-11, 0, 3.5)
+	local groundAtStairs = floorAt(stairTop.X, stairTop.Z)
+	local steps = math.max(1, math.ceil((deckY - groundAtStairs) / 0.9))
+	for i = 1, steps do
+		local stepCF = cf * CFrame.new(-11 - i * 1.1, -i * 0.9, 3.5)
+		part({ Size = Vector3.new(1.2, 0.4, 4), CFrame = stepCF })
+	end
+
+	-- the hut on the back half of the deck
+	local wallH = 8
+	local hutCentre = cf * CFrame.new(0, 0.5 + wallH / 2, 4.5)
+	local walls = {
+		{ Vector3.new(12, wallH, 0.5), CFrame.new(0, 0, 3) }, -- back
+		{ Vector3.new(0.5, wallH, 6.5), CFrame.new(-6, 0, 0) }, -- left
+		{ Vector3.new(0.5, wallH, 6.5), CFrame.new(6, 0, 0) }, -- right
+		{ Vector3.new(4, wallH, 0.5), CFrame.new(-4, 0, -3) }, -- front left of the door
+		{ Vector3.new(4, wallH, 0.5), CFrame.new(4, 0, -3) }, -- front right of the door
+		{ Vector3.new(4, 1.5, 0.5), CFrame.new(0, wallH / 2 - 0.75, -3) }, -- above the door
+	}
+	for _, w in walls do
+		part({ Size = w[1], CFrame = hutCentre * w[2], Color = Color3.fromRGB(205, 170, 120) })
+	end
+	-- a window on each side
+	for _, side in { -1, 1 } do
+		part({
+			Size = Vector3.new(0.6, 2.2, 2.6),
+			CFrame = hutCentre * CFrame.new(side * 6, 0.8, 0),
+			Color = Color3.fromRGB(150, 210, 240),
+			Material = Enum.Material.Glass,
+			Transparency = 0.4,
+		})
+	end
+	-- thatched roof: two slopes
+	for _, side in { -1, 1 } do
+		part({
+			Size = Vector3.new(14.5, 0.6, 5.6),
+			CFrame = hutCentre * CFrame.new(0, wallH / 2 + 1.4, side * 2.2) * CFrame.Angles(side * math.rad(28), 0, 0),
+			Color = Color3.fromRGB(190, 160, 90),
+			Material = Enum.Material.Grass,
+		})
+	end
+
+	-- deck chairs, a table and a beach umbrella out front
+	local fabric = { Color3.fromRGB(230, 70, 70), Color3.fromRGB(60, 150, 230) }
+	for i, x in { -7, -2.5 } do
+		local base = cf * CFrame.new(x, 0.5, -4)
+		part({ Size = Vector3.new(2.4, 0.3, 3.6), CFrame = base * CFrame.new(0, 1, 0) * CFrame.Angles(math.rad(-8), 0, 0), Color = fabric[i], Material = Enum.Material.Fabric })
+		part({ Size = Vector3.new(2.4, 3, 0.3), CFrame = base * CFrame.new(0, 2.3, 1.9) * CFrame.Angles(math.rad(-25), 0, 0), Color = fabric[i], Material = Enum.Material.Fabric })
+		for _, lx in { -1.1, 1.1 } do
+			for _, lz in { -1.5, 1.5 } do
+				part({ Size = Vector3.new(0.25, 1, 0.25), CFrame = base * CFrame.new(lx, 0.5, lz), Color = DARK_WOOD, Material = Enum.Material.Wood })
+			end
+		end
+	end
+	local tableCF = cf * CFrame.new(4.5, 0.5, -4)
+	Build.cylinderBetween(tableCF.Position, tableCF.Position + Vector3.new(0, 2.6, 0), 0.4, { Color = DARK_WOOD, Material = Enum.Material.Wood }, model)
+	part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 3.4, 3.4), CFrame = CFrame.new(tableCF.Position + Vector3.new(0, 2.7, 0)) * CFrame.Angles(0, 0, math.pi / 2) })
+	local umbrellaBase = cf * CFrame.new(8, 0.5, -4)
+	Build.cylinderBetween(umbrellaBase.Position, umbrellaBase.Position + Vector3.new(0, 8, 0), 0.25, { Color = Color3.new(1, 1, 1) }, model)
+	part({
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.4, 9, 9),
+		CFrame = CFrame.new(umbrellaBase.Position + Vector3.new(0, 8, 0)) * CFrame.Angles(0, 0, math.pi / 2),
+		Color = Color3.fromRGB(255, 200, 60),
+		Material = Enum.Material.Fabric,
+	})
+
+	-- string lights along the front railing
+	local bulbColours = { Color3.fromRGB(255, 220, 120), Color3.fromRGB(255, 140, 90), Color3.fromRGB(140, 220, 255) }
+	for i = 0, 8 do
+		local p = (cf * CFrame.new(-10 + i * 2.5, 4, -7.8)).Position
+		local bulb = part({
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.one * 0.45,
+			CFrame = CFrame.new(p),
+			Color = bulbColours[i % 3 + 1],
+			Material = Enum.Material.Neon,
+			CanCollide = false,
+		})
+		if i % 3 == 0 then
+			local l = Instance.new("PointLight")
+			l.Color = bulb.Color
+			l.Range = 10
+			l.Brightness = 0.8
+			l.Parent = bulb
+		end
+	end
+
+	model.Parent = parent
 end
 
 ---------------------------------------------------------------- raft, spawn and shop
@@ -700,6 +885,7 @@ function World.build()
 	buildRaft()
 	volcanoSmoke()
 
+	buildBeachHut(workspace)
 	scatterPalms(folder("Palms"))
 
 	local reefFolder = folder("Reefs")

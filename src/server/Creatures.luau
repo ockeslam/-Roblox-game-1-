@@ -266,7 +266,46 @@ local function buildSquid(pos)
 	return model, root, 9
 end
 
-local BUILDERS = { Fish = buildFish, Shark = buildShark, Squid = buildSquid }
+local function buildJelly(pos, def)
+	local model = Instance.new("Model")
+	local colour = def.colours[rng:NextInteger(1, #def.colours)]
+	local s = rng:NextNumber(0.8, 1.3)
+	local root = Build.ellipsoid(Vector3.new(3, 2, 3) * s, CFrame.new(pos), colour, model, {
+		Name = "Bell",
+		Transparency = 0.35,
+		Material = Enum.Material.Glass,
+	})
+	weld(root, Build.ellipsoid(Vector3.new(1.8, 1.1, 1.8) * s, CFrame.new(pos + Vector3.new(0, -0.1, 0)), colour, model, {
+		Material = Enum.Material.Neon,
+		Transparency = 0.4,
+	}))
+	local light = Instance.new("PointLight")
+	light.Color = colour
+	light.Range = 9
+	light.Brightness = 1.2
+	light.Parent = root
+
+	-- tentacles hang down and wave about
+	for i = 1, 6 do
+		local a = i / 6 * math.pi * 2
+		local start = pos + Vector3.new(math.cos(a) * 0.9 * s, -0.5 * s, math.sin(a) * 0.9 * s)
+		local dir = Vector3.new(math.cos(a) * 0.08, -1, math.sin(a) * 0.08).Unit
+		local prev, joint = root, start
+		for k = 1, 3 do
+			local finish = joint + dir * 1.4 * s
+			local seg = Build.cylinderBetween(joint, finish, 0.14, {
+				Color = colour,
+				Material = Enum.Material.Neon,
+				Transparency = 0.35,
+			}, model)
+			wiggleJoint(prev, seg, CFrame.lookAt(joint, finish), 0.3, 0.3, 1.5, i + k * 0.6)
+			prev, joint = seg, finish
+		end
+	end
+	return model, root, 2.5 * s
+end
+
+local BUILDERS = { Fish = buildFish, Shark = buildShark, Squid = buildSquid, Jelly = buildJelly }
 
 local function finish(model, root)
 	for _, p in model:GetDescendants() do
@@ -409,6 +448,16 @@ local function squidBrain(rec)
 	local stateEnds, lastHit = 0, 0
 	local ink = rec.root:FindFirstChild("InkAtt") and rec.root.InkAtt:FindFirstChild("Ink")
 
+	-- a storm rolls in while the squid is hunting (clients handle the weather)
+	local function setStorm(on)
+		if (workspace:GetAttribute("Storm") == true) ~= on then
+			workspace:SetAttribute("Storm", on)
+			if on then
+				Remotes.Announce:FireAllClients("The sky darkens... the Giant Squid is hunting.")
+			end
+		end
+	end
+
 	local function setTarget(player)
 		if target and target ~= player and target.Parent then
 			target:SetAttribute("Stalked", nil)
@@ -416,6 +465,7 @@ local function squidBrain(rec)
 		target = player
 		if player then
 			player:SetAttribute("Stalked", true)
+			setStorm(true)
 		end
 	end
 
@@ -487,6 +537,7 @@ local function squidBrain(rec)
 			goal, speed = waypoint, def.chargeSpeed * 0.8
 			if now >= stateEnds then
 				state = "lurk"
+				setStorm(false)
 			end
 		end
 
@@ -502,12 +553,55 @@ local function squidBrain(rec)
 		task.wait(0.1)
 	end
 	setTarget(nil)
+	setStorm(false)
 end
 
-local BRAINS = { Fish = fishBrain, Shark = sharkBrain, Squid = squidBrain }
+local function sting(d, amount)
+	d.hum:TakeDamage(amount)
+	Remotes.Fx:FireClient(d.player, "sting", d.hrp.Position)
+end
+
+-- Jellyfish drift slowly and bob. Swim into the tentacles and you get stung.
+local function jellyBrain(rec)
+	local def = rec.def
+	local home = rec.root.Position
+	local waypoint = home
+	local lastSting = {}
+	local phase = rng:NextNumber(0, math.pi * 2)
+	while alive(rec) do
+		local pos = rec.root.Position
+		local now = os.clock()
+		if (waypoint - pos).Magnitude < 3 then
+			waypoint = clampGoal(home + Vector3.new(rng:NextNumber(-25, 25), rng:NextNumber(-8, 8), rng:NextNumber(-25, 25)), 10, S - 8)
+		end
+		local bob = Vector3.new(0, math.sin(now * 0.8 + phase) * 1.5, 0)
+		rec.ap.Position = clampGoal(waypoint + bob, 10, S - 6)
+		rec.ap.MaxVelocity = def.speed
+		rec.ao.CFrame = CFrame.Angles(math.sin(now * 0.5 + phase) * 0.12, 0, math.cos(now * 0.4 + phase) * 0.12)
+
+		-- the stinging bit is the bell and the tentacles just under it
+		local stingPoint = pos + Vector3.new(0, -2, 0)
+		for _, d in divers() do
+			if (d.hrp.Position - stingPoint).Magnitude < def.stingRange then
+				local last = lastSting[d.player]
+				if not last or now - last > def.stingCooldown then
+					lastSting[d.player] = now
+					sting(d, def.sting)
+				end
+			end
+		end
+		task.wait(0.15)
+	end
+end
+
+local BRAINS = { Fish = fishBrain, Shark = sharkBrain, Squid = squidBrain, Jelly = jellyBrain }
 
 ---------------------------------------------------------------- spawning
 local function spawnPoint(def)
+	if def.type == "Jelly" then
+		local p = Config.randomInLagoon(rng, 40)
+		return Vector3.new(p.X, rng:NextNumber(25, S - 15), p.Z)
+	end
 	if def.type == "Fish" then
 		local centres = Config.reefCenters()
 		local c = centres[rng:NextInteger(1, #centres)]
@@ -572,6 +666,15 @@ function Creatures.damage(model, amount, player)
 	if not rec or rec.dead then
 		return false
 	end
+	-- shooting a jellyfish zaps you through the harpoon line
+	if rec.def.type == "Jelly" and player and player.Character then
+		local hum = player.Character:FindFirstChildOfClass("Humanoid")
+		local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+		if hum and hrp and hum.Health > 0 then
+			sting({ player = player, hum = hum, hrp = hrp }, rec.def.shootSting)
+		end
+	end
+
 	rec.health -= amount
 	rec.hurtAt = os.clock()
 	rec.attacker = player

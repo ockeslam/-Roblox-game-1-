@@ -27,7 +27,7 @@ local function aimPoint()
 	if player.Character then
 		table.insert(ignore, player.Character)
 	end
-	for _, name in { "MarineLife", "Coins" } do
+	for _, name in { "MarineLife", "Coins", "Birds" } do
 		local f = workspace:FindFirstChild(name)
 		if f then
 			table.insert(ignore, f)
@@ -179,6 +179,9 @@ function Weapons.start()
 			damageNumber(pos, killed and ("-" .. dmg .. "  KILL!") or ("-" .. dmg), killed and Color3.fromRGB(255, 220, 60) or Color3.new(1, 1, 1))
 		elseif kind == "splash" then
 			drawSplash(...)
+		elseif kind == "sting" then
+			local pos = ...
+			damageNumber(pos + Vector3.new(0, 2, 0), "STUNG!", Color3.fromRGB(120, 230, 255))
 		end
 	end)
 end

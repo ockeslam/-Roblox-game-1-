@@ -1,4 +1,4 @@
--- Fish schools, jellyfish, sea turtles, manta rays and crabs.
+-- Fish schools, sea turtles, manta rays and crabs (the jellyfish are real creatures now, see Creatures.luau).
 -- They're made on each player's machine, so they move smoothly and cost the server nothing.
 -- Fish scatter when you or a shark swims through them.
 local Players = game:GetService("Players")
@@ -106,33 +106,6 @@ local function fishPos(s, f, t)
 	return c + f.offset + wobble
 end
 
----------------------------------------------------------------- jellyfish
-local jellies = {}
-
-local function makeJelly()
-	local colour = ({ Color3.fromRGB(255, 140, 220), Color3.fromRGB(170, 140, 255), Color3.fromRGB(120, 230, 255) })[rng:NextInteger(1, 3)]
-	local bell = blob(Vector3.new(2.6, 1.8, 2.6), colour, { Transparency = 0.35, Material = Enum.Material.Glass })
-	local light = Instance.new("PointLight")
-	light.Color = colour
-	light.Range = 8
-	light.Brightness = 1
-	light.Parent = bell
-	local tentacles = {}
-	for i = 1, 5 do
-		local a = i / 5 * math.pi * 2
-		table.insert(tentacles, {
-			part = block(Vector3.new(0.12, 3, 0.12), colour, { Transparency = 0.4 }),
-			off = Vector3.new(math.cos(a) * 0.7, -0.5, math.sin(a) * 0.7),
-		})
-	end
-	table.insert(jellies, {
-		bell = bell,
-		tentacles = tentacles,
-		home = Config.randomInLagoon(rng, 45) + Vector3.new(0, rng:NextNumber(25, S - 15), 0),
-		ph = rng:NextNumber(0, math.pi * 2),
-	})
-end
-
 ---------------------------------------------------------------- turtles
 local turtles = {}
 
@@ -229,9 +202,6 @@ local function spawnAll()
 		local home = Config.randomInLagoon(rng, 70) + Vector3.new(0, rng:NextNumber(30, 55), 0)
 		makeSchool(home, 25, SILVER, 0.7, rng:NextNumber(35, 60))
 	end
-	for _ = 1, 14 do
-		makeJelly()
-	end
 	-- sea turtles: some cruise mid-water, some paddle near the surface, some rest on the beach
 	for _ = 1, 6 do
 		makeTurtle()
@@ -296,21 +266,6 @@ local function step()
 			local cf = facing(pos, pos + (p2 - p1))
 			put(f.body, cf)
 			put(f.tail, cf * CFrame.new(0, 0, 0.95 * f.size) * CFrame.Angles(0, math.sin(t * 12 + f.ph) * 0.5, 0) * CFrame.new(0, 0, 0.25 * f.size))
-		end
-	end
-
-	-- jellyfish: slow drift plus a pulsing bob
-	for _, j in jellies do
-		local function at(tt)
-			return j.home
-				+ Vector3.new(math.sin(tt * 0.05 + j.ph) * 15, math.sin(tt * 0.8 + j.ph) * 1.5 + math.sin(tt * 0.1 + j.ph) * 6, math.cos(tt * 0.04 + j.ph) * 15)
-		end
-		local pos = at(t)
-		local cf = CFrame.new(pos) * CFrame.Angles(math.sin(t * 0.5 + j.ph) * 0.15, 0, math.cos(t * 0.4 + j.ph) * 0.15)
-		put(j.bell, cf)
-		for i, tent in j.tentacles do
-			local sway = CFrame.Angles(math.sin(t * 2 + i + j.ph) * 0.25, 0, math.cos(t * 1.7 + i) * 0.25)
-			put(tent.part, cf * CFrame.new(tent.off) * sway * CFrame.new(0, -1.5, 0))
 		end
 	end
 

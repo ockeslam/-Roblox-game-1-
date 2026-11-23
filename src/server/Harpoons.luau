@@ -159,6 +159,34 @@ local function onFire(player, aimPoint)
 	local hit = workspace:Raycast(muzzle, dir, shotParams)
 	local endPos = hit and hit.Position or (muzzle + dir)
 	local target = hit and Creatures.fromPart(hit.Instance)
+
+	-- slight aim assist: if you only just missed something, bend the shot onto it.
+	-- jellyfish are left out so the assist never drags you into a sting.
+	if not target then
+		local aimDir = aim.Unit
+		local best, bestAngle = nil, math.rad(Config.AimAssistDegrees)
+		for _, m in Creatures.near(muzzle, def.range) do
+			local root = m.PrimaryPart
+			if root and m:GetAttribute("Type") ~= "Jelly" then
+				local to = root.Position - muzzle
+				if to.Magnitude > 0.1 then
+					local angle = math.acos(math.clamp(aimDir:Dot(to.Unit), -1, 1))
+					if angle < bestAngle then
+						best, bestAngle = m, angle
+					end
+				end
+			end
+		end
+		if best then
+			local to = best.PrimaryPart.Position - muzzle
+			local check = workspace:Raycast(muzzle, to.Unit * math.min(to.Magnitude + 3, def.range), shotParams)
+			if check and Creatures.fromPart(check.Instance) == best then
+				endPos = check.Position
+				target = best
+			end
+		end
+	end
+
 	local travel = (endPos - muzzle).Magnitude / def.speed
 
 	Remotes.Fx:FireAllClients("shot", player, muzzle, endPos, def.id, travel)

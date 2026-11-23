@@ -22,13 +22,31 @@ local Config = {
 	-- Reef
 	ReefCount = 6,
 	KelpForests = 4,
+
+	-- Harpoon aim assist: if you miss by less than this many degrees, the shot bends onto the target
+	AimAssistDegrees = 4,
+
+	-- Birds flying over the island
+	BirdCount = 16,
+}
+
+-- Sounds. Leave "" to use the built-in placeholder sound.
+-- To use a better one: in Studio open Toolbox > Creator Store > Audio, search
+-- (e.g. "thunder", "heavy rain", "horror sting", "sea monster", "seagulls"),
+-- right-click a sound > Copy Asset ID, and paste it here like "rbxassetid://123456".
+Config.Sounds = {
+	Thunder = "",
+	Rain = "",
+	SquidSting = "", -- plays when the squid starts hunting
+	SquidDrone = "", -- loops during the storm
+	Seagulls = "",
 }
 
 -- Everything you can hunt. reward = total cash dropped as coins.
 Config.Creatures = {
 	Snapper = {
 		type = "Fish",
-		count = 14,
+		count = 24,
 		health = 20,
 		reward = 6,
 		speed = 7,
@@ -37,9 +55,31 @@ Config.Creatures = {
 		body = Vector3.new(0.9, 1.5, 3),
 		colours = { Color3.fromRGB(230, 90, 70), Color3.fromRGB(255, 190, 160) },
 	},
+	Parrotfish = {
+		type = "Fish",
+		count = 14,
+		health = 30,
+		reward = 9,
+		speed = 6,
+		fleeSpeed = 12,
+		respawn = 20,
+		body = Vector3.new(1.1, 1.8, 3.4),
+		colours = { Color3.fromRGB(40, 200, 180), Color3.fromRGB(255, 120, 200) },
+	},
+	Mackerel = {
+		type = "Fish",
+		count = 16,
+		health = 15,
+		reward = 5,
+		speed = 9,
+		fleeSpeed = 16,
+		respawn = 15,
+		body = Vector3.new(0.7, 1.1, 3.2),
+		colours = { Color3.fromRGB(70, 110, 140), Color3.fromRGB(220, 230, 240) },
+	},
 	Grouper = {
 		type = "Fish",
-		count = 8,
+		count = 10,
 		health = 55,
 		reward = 15,
 		speed = 5,
@@ -48,9 +88,22 @@ Config.Creatures = {
 		body = Vector3.new(1.6, 2.2, 4.5),
 		colours = { Color3.fromRGB(120, 95, 70), Color3.fromRGB(205, 175, 125) },
 	},
+	Jellyfish = {
+		type = "Jelly",
+		count = 18,
+		health = 10,
+		reward = 4,
+		speed = 2,
+		respawn = 25,
+		sting = 10, -- damage if you swim into one
+		shootSting = 6, -- damage you take for shooting one
+		stingRange = 4,
+		stingCooldown = 1.5,
+		colours = { Color3.fromRGB(255, 140, 220), Color3.fromRGB(170, 140, 255), Color3.fromRGB(120, 230, 255) },
+	},
 	Tuna = {
 		type = "Fish",
-		count = 6,
+		count = 8,
 		health = 90,
 		reward = 25,
 		speed = 10,
