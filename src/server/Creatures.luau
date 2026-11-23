@@ -143,8 +143,8 @@ local function buildFish(pos, def)
 	-- lighter belly
 	weld(root, Build.ellipsoid(Vector3.new(b.X * 0.85, b.Y * 0.6, b.Z * 0.85), cf * CFrame.new(0, -b.Y * 0.2, 0), second, model))
 
-	-- usual dorsal fin (the mahi-mahi and sunfish get their own)
-	if not def.mahi and not def.sunfish then
+	-- usual dorsal fin (some fish get their own)
+	if not def.mahi and not def.sunfish and not def.ray and not def.eel and not def.sail and not def.hammer then
 		weld(root, Build.part({
 			Shape = Enum.PartType.Wedge,
 			Size = Vector3.new(0.15, b.Y * 0.5, b.Z * 0.4),
@@ -235,6 +235,59 @@ local function buildFish(pos, def)
 		end
 	end
 
+	-- spots (goby, moray, stingray, coelacanth)
+	if def.spots then
+		for _ = 1, 14 do
+			local dir = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(0.1, 1), rng:NextNumber(-0.8, 0.8))
+			if dir.Magnitude > 0.1 then
+				dir = dir.Unit
+				local p = cf:PointToWorldSpace(Vector3.new(dir.X * b.X / 2, dir.Y * b.Y / 2, dir.Z * b.Z / 2))
+				local d = math.max(0.15, math.min(b.X, b.Y, b.Z) * 0.18)
+				weld(root, Build.part({ Shape = Enum.PartType.Ball, Size = Vector3.one * d, CFrame = CFrame.new(p), Color = Color3.fromRGB(245, 245, 235) }, model))
+			end
+		end
+	end
+
+	-- tall sail fin (marlin, moorish idol)
+	if def.sail then
+		weld(root, Build.part({
+			Size = Vector3.new(0.1, b.Y * 1.1, b.Z * 0.5),
+			CFrame = cf * CFrame.new(0, b.Y * 0.85, -b.Z * 0.05) * CFrame.Angles(math.rad(15), 0, 0),
+			Color = def.mahi and second or Color3.fromRGB(60, 110, 220),
+			Transparency = 0.15,
+		}, model))
+	end
+
+	-- moray eel: a frilly fin all along its back
+	if def.eel then
+		weld(root, Build.part({
+			Size = Vector3.new(0.1, b.Y * 0.4, b.Z * 0.85),
+			CFrame = cf * CFrame.new(0, b.Y * 0.5, 0),
+			Color = second,
+		}, model))
+	end
+
+	-- stingray: long whip tail
+	if def.ray then
+		local tailStart = cf:PointToWorldSpace(Vector3.new(0, 0, b.Z * 0.45))
+		weld(root, Build.cylinderBetween(tailStart, tailStart + cf.LookVector * -b.Z * 1.1, 0.2, { Color = main }, model))
+	end
+
+	-- hammerhead: the hammer, with eyes on the ends, and a tall fin
+	if def.hammer then
+		local front = cf * CFrame.new(0, b.Y * 0.05, -b.Z * 0.45)
+		weld(root, Build.ellipsoid(Vector3.new(b.X * 2.4, b.Y * 0.35, b.Z * 0.14), front, main, model))
+		for _, side in { -1, 1 } do
+			weld(root, Build.part({ Shape = Enum.PartType.Ball, Size = Vector3.one * 0.35, CFrame = front * CFrame.new(side * b.X * 1.2, 0, 0), Color = BLACK }, model))
+		end
+		weld(root, Build.part({
+			Shape = Enum.PartType.Wedge,
+			Size = Vector3.new(0.25, b.Y * 0.9, b.Z * 0.22),
+			CFrame = cf * CFrame.new(0, b.Y * 0.85, 0),
+			Color = main,
+		}, model))
+	end
+
 	-- legendary golden fish glows and sparkles
 	if def.glow then
 		local light = Instance.new("PointLight")
@@ -255,7 +308,14 @@ local function buildFish(pos, def)
 
 	-- tail on a joint so it can wag
 	local jointCF = cf * CFrame.new(0, 0, b.Z * 0.45)
-	local tailSize = def.sunfish and Vector3.new(0.15, b.Y * 0.6, b.Z * 0.12) or Vector3.new(0.12, b.Y * 0.9, b.Z * 0.3)
+	local tailSize = Vector3.new(0.12, b.Y * 0.9, b.Z * 0.3)
+	if def.sunfish then
+		tailSize = Vector3.new(0.15, b.Y * 0.6, b.Z * 0.12)
+	elseif def.ray then
+		tailSize = Vector3.new(b.X * 0.25, 0.15, b.Z * 0.2) -- flat little tail flap
+	elseif def.eel then
+		tailSize = Vector3.new(0.12, b.Y * 0.6, b.Z * 0.15)
+	end
 	local tail = Build.part({
 		Size = tailSize,
 		CFrame = jointCF * CFrame.new(0, 0, tailSize.Z / 2),
@@ -589,13 +649,20 @@ local function fishBrain(rec)
 				speed = def.fleeSpeed
 			else
 				if (waypoint - pos).Magnitude < 5 then
-					waypoint = clampGoal(home + Vector3.new(rng:NextNumber(-30, 30), rng:NextNumber(-6, 8), rng:NextNumber(-30, 30)), 5, S - 4)
+					local w = home + Vector3.new(rng:NextNumber(-30, 30), rng:NextNumber(-6, 8), rng:NextNumber(-30, 30))
+					if def.bottom then
+						w = Vector3.new(w.X, floorAt(w.X, w.Z) + rng:NextNumber(2, 5), w.Z)
+					end
+					waypoint = clampGoal(w, 3, S - 4)
 				end
 				goal = waypoint
 				speed = def.speed
 			end
 		end
-		steer(rec, clampGoal(goal, 5, S - 4), speed)
+		if def.bottom and not dashing then
+			goal = Vector3.new(goal.X, math.min(goal.Y, floorAt(goal.X, goal.Z) + 8), goal.Z)
+		end
+		steer(rec, clampGoal(goal, 3, S - 4), speed)
 		task.wait(dashing and 0.05 or 0.15)
 	end
 end
@@ -842,6 +909,11 @@ local function spawnPoint(def)
 		local p = Config.randomInLagoon(rng, 40)
 		return Vector3.new(p.X, rng:NextNumber(25, S - 15), p.Z)
 	end
+	if def.type == "Fish" and def.bottom then
+		local c = Config.reefCenters()[rng:NextInteger(1, #Config.reefCenters())]
+		local x, z = c.X + rng:NextNumber(-35, 35), c.Z + rng:NextNumber(-35, 35)
+		return Vector3.new(x, floorAt(x, z) + 3, z)
+	end
 	if def.type == "Fish" then
 		if rng:NextNumber() < 0.6 then
 			local centres = Config.reefCenters()
@@ -944,7 +1016,8 @@ function Creatures.damage(model, amount, player)
 			Remotes.Announce:FireAllClients(who .. " slew the Giant Squid!")
 		end
 		model:Destroy()
-		task.delay(rec.def.respawn, function()
+		local _, respawnTime = Config.spawnFor(rec.def)
+		task.delay(respawnTime, function()
 			local ok, err = pcall(Creatures.spawn, rec.kind)
 			if not ok then
 				warn("[Reef Dive] couldn't respawn " .. rec.kind .. ": " .. tostring(err))
@@ -984,7 +1057,8 @@ function Creatures.start()
 	local total = 0
 	for kind, def in Config.Creatures do
 		local ok, err = pcall(function()
-			for _ = 1, def.count do
+			local count = Config.spawnFor(def)
+			for _ = 1, count do
 				Creatures.spawn(kind)
 				total += 1
 			end

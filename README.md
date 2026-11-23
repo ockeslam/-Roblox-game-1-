@@ -6,12 +6,12 @@ An underwater Roblox game. You spawn on a raft in a lagoon in the middle of a tr
 
 - **The island:** a ring of sandy beaches and jungle hills with palm trees around the lagoon, little sandy islets inside it, a smoking volcano behind, and open ocean with more islands on the horizon
 - **The reef:** branching coral, brain coral, sea fans, tube coral, anemones, starfish, and kelp forests that sway
-- **Hunting:** 15+ species you can shoot, each with a rarity from 1 (Common) to 5 (Legendary). Rarer catches have more health but drop more coins and XP. Their name and stars show above them when hit. Harpoons have a slight aim assist
-  - Common: sardine, snapper, mackerel, damselfish, crab, jellyfish
-  - Uncommon: clownfish, parrotfish, butterflyfish, angelfish, pufferfish
-  - Rare: grouper, tuna, barracuda, triggerfish, lionfish, king crab
-  - Epic: mahi-mahi (rarely dashes at you at huge speed), swordfish, shark
-  - Legendary: ocean sunfish, golden fish, giant squid
+- **Hunting:** 30 species you can shoot, each with a rarity from 1 (Common) to 5 (Legendary). Rarer catches are scarcer and slower to respawn, have more health, and drop more coins and XP. Their name and stars show above them when hit. Harpoons have a slight aim assist
+  - Common (8 of each, back in 10s): sardine, snapper, mackerel, damselfish, blue chromis, goby, crab, jellyfish
+  - Uncommon (6 of each, 20s): clownfish, parrotfish, butterflyfish, angelfish, pufferfish, blue tang, wrasse, moorish idol
+  - Rare (4 of each, 45s): grouper, tuna, barracuda, triggerfish, lionfish, moray eel, stingray, king crab
+  - Epic (2 of each, 90s): mahi-mahi (rarely dashes at you at huge speed), swordfish, hammerhead, marlin. Plus 4 sharks
+  - Legendary (1 of each, 4 minutes): ocean sunfish, golden fish, coelacanth, giant squid
 - **Levels:** earn XP from kills and pearls. Each level makes creatures tougher and hit harder for you, but they pay more. Every 3 levels another shark joins the lagoon, and the squid hunts more often
 - **Jellyfish:** glowing and drifting. Swim into one and you get stung. Shoot one and the shock comes back down the line, so you get stung too
 - **Sharks:** patrol and chase you if you get close, or if you shoot them. Worth a lot of cash
