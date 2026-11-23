@@ -1,4 +1,4 @@
--- Money, pearls, oxygen, owned harpoons, and saving.
+-- Money, pearls, XP and levels, oxygen, owned harpoons, and saving.
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
 local DataStoreService = game:GetService("DataStoreService")
@@ -24,7 +24,14 @@ local function setup(player)
 	local pearls = Instance.new("IntValue")
 	pearls.Name = "Pearls"
 	pearls.Parent = stats
+	local level = Instance.new("IntValue")
+	level.Name = "Level"
+	level.Value = 1
+	level.Parent = stats
 	stats.Parent = player
+
+	player:SetAttribute("Level", 1)
+	player:SetAttribute("XP", 0)
 
 	player:SetAttribute("Oxygen", 100)
 	player:SetAttribute("Own_Basic", true)
@@ -42,6 +49,10 @@ local function setup(player)
 		elseif ok and type(saved) == "table" then
 			money.Value = tonumber(saved.Money) or 0
 			pearls.Value = tonumber(saved.Pearls) or 0
+			local lvl = math.clamp(tonumber(saved.Level) or 1, 1, Config.MaxLevel)
+			player:SetAttribute("Level", lvl)
+			player:SetAttribute("XP", tonumber(saved.XP) or 0)
+			level.Value = lvl
 			if type(saved.Owned) == "table" then
 				for _, id in saved.Owned do
 					if Config.harpoon(id) then
@@ -75,10 +86,33 @@ local function save(player)
 		Pearls = stats.Pearls.Value,
 		Owned = owned,
 		Equipped = player:GetAttribute("Equipped"),
+		Level = player:GetAttribute("Level") or 1,
+		XP = player:GetAttribute("XP") or 0,
 	}
 	pcall(function()
 		store:SetAsync("p_" .. player.UserId, data)
 	end)
+end
+
+-- Add XP and level up as many times as it covers.
+function PlayerStats.addXP(player, amount)
+	if not player or not player.Parent or amount <= 0 then
+		return
+	end
+	local level = player:GetAttribute("Level") or 1
+	local xp = (player:GetAttribute("XP") or 0) + amount
+	while level < Config.MaxLevel and xp >= Config.xpToNext(level) do
+		xp -= Config.xpToNext(level)
+		level += 1
+	end
+	player:SetAttribute("XP", xp)
+	if level ~= player:GetAttribute("Level") then
+		player:SetAttribute("Level", level) -- the client shows the level-up banner
+		local stats = player:FindFirstChild("leaderstats")
+		if stats and stats:FindFirstChild("Level") then
+			stats.Level.Value = level
+		end
+	end
 end
 
 local function hookPearl(pearl)
@@ -96,6 +130,7 @@ local function hookPearl(pearl)
 		ready = false
 		stats.Pearls.Value += 1
 		stats.Money.Value += Config.PearlMoney
+		PlayerStats.addXP(player, 8)
 		pearl.Transparency = 1
 		if glow then
 			glow.Enabled = false

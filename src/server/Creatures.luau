@@ -1,5 +1,5 @@
--- Everything you can hunt: fish, sharks and the giant squid.
--- Each creature has health, a brain (AI loop) and drops coins when it dies.
+-- Everything you can hunt: fish, crabs, jellyfish, sharks and the giant squid.
+-- Each creature has a rarity, health, a brain (AI loop) and drops coins + XP when it dies.
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -8,6 +8,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Build = require(ReplicatedStorage.Shared.Build)
 local Coins = require(script.Parent.Coins)
 local Remotes = require(script.Parent.Remotes)
+local PlayerStats = require(script.Parent.PlayerStats)
 
 local Creatures = {}
 
@@ -17,6 +18,33 @@ local folder
 local registry = {} -- model -> record
 
 ---------------------------------------------------------------- helpers
+local function levelOf(player)
+	return player and player:GetAttribute("Level") or 1
+end
+
+local function maxLevel()
+	local m = 1
+	for _, p in Players:GetPlayers() do
+		m = math.max(m, levelOf(p))
+	end
+	return m
+end
+
+-- creature attacks hit harder the higher your level
+local function hurt(d, baseDamage)
+	d.hum:TakeDamage(baseDamage * Config.difficulty(levelOf(d.player)).damage)
+end
+
+local floorParams = RaycastParams.new()
+floorParams.IgnoreWater = true
+floorParams.FilterType = Enum.RaycastFilterType.Include
+floorParams.FilterDescendantsInstances = { workspace.Terrain }
+
+local function floorAt(x, z)
+	local hit = workspace:Raycast(Vector3.new(x, S + 40, z), Vector3.new(0, -S - 100, 0), floorParams)
+	return hit and hit.Position.Y or 0
+end
+
 local function point(minY, maxY, margin)
 	local p = Config.randomInLagoon(rng, margin or 25)
 	return Vector3.new(p.X, rng:NextNumber(minY, maxY), p.Z)
@@ -108,33 +136,165 @@ local BLACK = Color3.new(0.05, 0.05, 0.05)
 local function buildFish(pos, def)
 	local model = Instance.new("Model")
 	local b = def.body * rng:NextNumber(0.9, 1.15)
-	local root = Build.ellipsoid(b, CFrame.new(pos), def.colours[1], model, { Name = "Body" })
+	local main, second = def.colours[1], def.colours[2]
+	local root = Build.ellipsoid(b, CFrame.new(pos), main, model, { Name = "Body" })
 	local cf = root.CFrame
 
-	weld(root, Build.ellipsoid(Vector3.new(b.X * 0.85, b.Y * 0.6, b.Z * 0.85), cf * CFrame.new(0, -b.Y * 0.2, 0), def.colours[2], model))
-	weld(root, Build.part({
-		Shape = Enum.PartType.Wedge,
-		Size = Vector3.new(0.15, b.Y * 0.5, b.Z * 0.4),
-		CFrame = cf * CFrame.new(0, b.Y * 0.55, b.Z * 0.05),
-		Color = def.colours[1],
-	}, model))
+	-- lighter belly
+	weld(root, Build.ellipsoid(Vector3.new(b.X * 0.85, b.Y * 0.6, b.Z * 0.85), cf * CFrame.new(0, -b.Y * 0.2, 0), second, model))
+
+	-- usual dorsal fin (the mahi-mahi and sunfish get their own)
+	if not def.mahi and not def.sunfish then
+		weld(root, Build.part({
+			Shape = Enum.PartType.Wedge,
+			Size = Vector3.new(0.15, b.Y * 0.5, b.Z * 0.4),
+			CFrame = cf * CFrame.new(0, b.Y * 0.55, b.Z * 0.05),
+			Color = main,
+		}, model))
+	end
+
+	-- eyes
 	for _, side in { -1, 1 } do
 		weld(root, Build.part({
 			Shape = Enum.PartType.Ball,
-			Size = Vector3.one * b.Y * 0.18,
+			Size = Vector3.one * math.max(0.2, math.min(b.X, b.Y) * 0.2),
 			CFrame = cf * CFrame.new(side * b.X * 0.42, b.Y * 0.12, -b.Z * 0.33),
 			Color = BLACK,
 		}, model))
 	end
 
+	-- stripes (clownfish, lionfish, butterflyfish)
+	if def.stripes then
+		for i = 1, def.stripes do
+			local f = def.stripes == 1 and 0 or (-0.3 + (i - 1) * 0.6 / (def.stripes - 1))
+			local z = f * b.Z
+			local k = math.sqrt(math.max(0.05, 1 - (2 * z / b.Z) ^ 2))
+			weld(root, Build.ellipsoid(
+				Vector3.new(b.X * k * 1.04, b.Y * k * 1.04, b.Z * 0.08),
+				cf * CFrame.new(0, 0, z),
+				def.stripeColour or Color3.new(1, 1, 1),
+				model
+			))
+		end
+	end
+
+	-- pufferfish spikes
+	if def.spikes then
+		for _ = 1, 16 do
+			local dir = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-1, 1), rng:NextNumber(-1, 1))
+			if dir.Magnitude > 0.1 then
+				dir = dir.Unit
+				local surface = cf:PointToWorldSpace(Vector3.new(dir.X * b.X / 2, dir.Y * b.Y / 2, dir.Z * b.Z / 2))
+				weld(root, Build.cylinderBetween(surface, surface + dir * 0.5, 0.1, { Color = second }, model))
+			end
+		end
+	end
+
+	-- lionfish spines and fan fins
+	if def.spines then
+		for i = 0, 6 do
+			local base = cf:PointToWorldSpace(Vector3.new(0, b.Y * 0.45, -b.Z * 0.3 + i * b.Z * 0.1))
+			local tip = base + cf:VectorToWorldSpace(Vector3.new(0, b.Y * 0.9, b.Z * 0.15))
+			weld(root, Build.cylinderBetween(base, tip, 0.08, { Color = i % 2 == 0 and main or second }, model))
+		end
+		for _, side in { -1, 1 } do
+			weld(root, Build.ellipsoid(
+				Vector3.new(b.Y * 1.1, 0.1, b.Z * 0.5),
+				cf * CFrame.new(side * b.X * 0.8, -b.Y * 0.1, -b.Z * 0.05) * CFrame.Angles(0, 0, side * 0.3),
+				second,
+				model,
+				{ Transparency = 0.25 }
+			))
+		end
+	end
+
+	-- swordfish bill
+	if def.bill then
+		local nose = cf:PointToWorldSpace(Vector3.new(0, 0, -b.Z * 0.48))
+		weld(root, Build.cylinderBetween(nose, nose + cf.LookVector * def.bill, 0.22, { Color = main }, model))
+	end
+
+	-- mahi-mahi: big blunt forehead and a long blue fin down the back
+	if def.mahi then
+		weld(root, Build.ellipsoid(Vector3.new(b.X * 0.95, b.Y * 1.05, b.Z * 0.35), cf * CFrame.new(0, b.Y * 0.08, -b.Z * 0.3), main, model))
+		weld(root, Build.part({
+			Size = Vector3.new(0.12, b.Y * 0.35, b.Z * 0.75),
+			CFrame = cf * CFrame.new(0, b.Y * 0.5, 0.05 * b.Z),
+			Color = Color3.fromRGB(40, 110, 220),
+		}, model))
+	end
+
+	-- ocean sunfish: tall fins top and bottom
+	if def.sunfish then
+		for _, side in { 1, -1 } do
+			weld(root, Build.part({
+				Size = Vector3.new(0.25, b.Y * 0.8, b.Z * 0.3),
+				CFrame = cf * CFrame.new(0, side * b.Y * 0.7, b.Z * 0.28) * CFrame.Angles(side * -0.25, 0, 0),
+				Color = main,
+			}, model))
+		end
+	end
+
+	-- legendary golden fish glows and sparkles
+	if def.glow then
+		local light = Instance.new("PointLight")
+		light.Color = main
+		light.Range = 14
+		light.Brightness = 3
+		light.Parent = root
+		local sparkle = Instance.new("ParticleEmitter")
+		sparkle.Color = ColorSequence.new(main)
+		sparkle.Size = NumberSequence.new(0.3, 0)
+		sparkle.Lifetime = NumberRange.new(0.8, 1.2)
+		sparkle.Rate = 12
+		sparkle.Speed = NumberRange.new(1, 2)
+		sparkle.SpreadAngle = Vector2.new(180, 180)
+		sparkle.LightEmission = 1
+		sparkle.Parent = root
+	end
+
+	-- tail on a joint so it can wag
 	local jointCF = cf * CFrame.new(0, 0, b.Z * 0.45)
+	local tailSize = def.sunfish and Vector3.new(0.15, b.Y * 0.6, b.Z * 0.12) or Vector3.new(0.12, b.Y * 0.9, b.Z * 0.3)
 	local tail = Build.part({
-		Size = Vector3.new(0.12, b.Y * 0.9, b.Z * 0.3),
-		CFrame = jointCF * CFrame.new(0, 0, b.Z * 0.15),
-		Color = def.colours[2],
+		Size = tailSize,
+		CFrame = jointCF * CFrame.new(0, 0, tailSize.Z / 2),
+		Color = second,
 	}, model)
-	wiggleJoint(root, tail, jointCF, 0.5, 0, 8, rng:NextNumber(0, 6))
-	return model, root, b.Y + 1
+	wiggleJoint(root, tail, jointCF, def.sunfish and 0.15 or 0.5, 0, def.sunfish and 2 or 8, rng:NextNumber(0, 6))
+	return model, root, b.Y + 1.5
+end
+
+local function buildCrab(pos, def)
+	local model = Instance.new("Model")
+	local s = def.size * rng:NextNumber(0.9, 1.15)
+	local main, second = def.colours[1], def.colours[2]
+	local root = Build.ellipsoid(Vector3.new(2.2, 0.9, 1.7) * s, CFrame.new(pos), main, model, { Name = "Shell" })
+	local cf = root.CFrame
+
+	for _, side in { -1, 1 } do
+		-- eyes on stalks
+		local stalkBase = cf:PointToWorldSpace(Vector3.new(side * 0.4 * s, 0.3 * s, -0.7 * s))
+		local stalkTop = stalkBase + Vector3.new(0, 0.5 * s, -0.05 * s)
+		weld(root, Build.cylinderBetween(stalkBase, stalkTop, 0.12 * s, { Color = second }, model))
+		weld(root, Build.part({ Shape = Enum.PartType.Ball, Size = Vector3.one * 0.25 * s, CFrame = CFrame.new(stalkTop), Color = BLACK }, model))
+
+		-- arm and snapping claw
+		local shoulder = cf:PointToWorldSpace(Vector3.new(side * 0.9 * s, 0, -0.6 * s))
+		local wrist = cf:PointToWorldSpace(Vector3.new(side * 1.4 * s, 0.1 * s, -1.3 * s))
+		local arm = weld(root, Build.cylinderBetween(shoulder, wrist, 0.25 * s, { Color = main }, model))
+		local claw = Build.ellipsoid(Vector3.new(0.7, 0.45, 0.9) * s, CFrame.lookAt(wrist, wrist + (wrist - shoulder)) * CFrame.new(0, 0, -0.35 * s), second, model)
+		wiggleJoint(arm, claw, CFrame.lookAt(wrist, wrist + (wrist - shoulder)), 0.1, 0.25, 3, side)
+
+		-- three legs a side, scuttling
+		for k = -1, 1 do
+			local hip = cf:PointToWorldSpace(Vector3.new(side * 0.95 * s, -0.1 * s, k * 0.5 * s))
+			local foot = hip + Vector3.new(side * 1.1 * s, -0.7 * s, k * 0.2 * s)
+			local leg = Build.cylinderBetween(hip, foot, 0.16 * s, { Color = main }, model)
+			wiggleJoint(root, leg, CFrame.lookAt(hip, foot), 0.3, 0.15, 9, k + side)
+		end
+	end
+	return model, root, 1.6 * s
 end
 
 local GREY = Color3.fromRGB(105, 120, 135)
@@ -305,7 +465,7 @@ local function buildJelly(pos, def)
 	return model, root, 2.5 * s
 end
 
-local BUILDERS = { Fish = buildFish, Shark = buildShark, Squid = buildSquid, Jelly = buildJelly }
+local BUILDERS = { Fish = buildFish, Shark = buildShark, Squid = buildSquid, Jelly = buildJelly, Crab = buildCrab }
 
 local function finish(model, root)
 	for _, p in model:GetDescendants() do
@@ -344,16 +504,31 @@ local function finish(model, root)
 	return ap, ao
 end
 
-local function healthBar(root, height)
+local function healthBar(root, height, kind, rarity)
+	local r = Config.Rarities[rarity] or Config.Rarities[1]
 	local bb = Instance.new("BillboardGui")
 	bb.Name = "HealthBar"
-	bb.Size = UDim2.fromOffset(90, 10)
+	bb.Size = UDim2.fromOffset(130, 34)
 	bb.StudsOffsetWorldSpace = Vector3.new(0, height, 0)
 	bb.MaxDistance = 150
 	bb.Enabled = false
 	bb.Adornee = root
+
+	local name = Instance.new("TextLabel")
+	name.Size = UDim2.new(1, 0, 0, 22)
+	name.BackgroundTransparency = 1
+	name.Font = Enum.Font.GothamBold
+	name.TextScaled = true
+	name.TextColor3 = r.colour
+	name.TextStrokeTransparency = 0.4
+	-- e.g. "Clownfish ★★"
+	local spaced = kind:gsub("(%l)(%u)", "%1 %2")
+	name.Text = spaced .. "  " .. string.rep("★", rarity)
+	name.Parent = bb
+
 	local bg = Instance.new("Frame")
-	bg.Size = UDim2.fromScale(1, 1)
+	bg.Position = UDim2.new(0, 10, 0, 24)
+	bg.Size = UDim2.new(1, -20, 0, 8)
 	bg.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	bg.BorderSizePixel = 0
 	bg.Parent = bb
@@ -372,29 +547,87 @@ local function fishBrain(rec)
 	local def = rec.def
 	local home = rec.root.Position
 	local waypoint = home
+	-- mahi-mahi dash attack state
+	local dashTarget, dashUntil, nextDashCheck, lastDash = nil, 0, 0, -1000
+
 	while alive(rec) do
 		local pos = rec.root.Position
 		local now = os.clock()
-		local threat = nearestDiver(pos, 20)
 		local goal, speed
-		if threat or now - rec.hurtAt < 3 then
-			local attacker = diverOf(rec.attacker)
-			local from = (threat and threat.hrp.Position) or (attacker and attacker.hrp.Position) or (pos + Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1)))
-			local away = pos - from
-			if away.Magnitude < 0.1 then
-				away = Vector3.xAxis
+
+		local dashing = dashTarget and now < dashUntil and diverOf(dashTarget)
+		if dashing then
+			-- rocket straight at them
+			goal, speed = dashing.hrp.Position, def.dash.speed
+			if (dashing.hrp.Position - pos).Magnitude < 5 then
+				hurt(dashing, def.dash.damage)
+				dashTarget = nil
+				rec.hurtAt = now -- then turn tail and flee
+				rec.attacker = dashing.player
 			end
-			goal = pos + away.Unit * 25
-			speed = def.fleeSpeed
 		else
-			if (waypoint - pos).Magnitude < 5 then
-				waypoint = clampGoal(home + Vector3.new(rng:NextNumber(-30, 30), rng:NextNumber(-6, 8), rng:NextNumber(-30, 30)), 5, S - 4)
+			dashTarget = nil
+			if def.dash and now >= nextDashCheck then
+				nextDashCheck = now + 2
+				if now - lastDash > def.dash.cooldown and rng:NextNumber() < def.dash.chance then
+					local victim = nearestDiver(pos, def.dash.range)
+					if victim then
+						dashTarget, dashUntil, lastDash = victim.player, now + 2.5, now
+					end
+				end
 			end
-			goal = waypoint
-			speed = def.speed
+
+			local threat = nearestDiver(pos, 20)
+			if threat or now - rec.hurtAt < 3 then
+				local attacker = diverOf(rec.attacker)
+				local from = (threat and threat.hrp.Position) or (attacker and attacker.hrp.Position) or (pos + Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1)))
+				local away = pos - from
+				if away.Magnitude < 0.1 then
+					away = Vector3.xAxis
+				end
+				goal = pos + away.Unit * 25
+				speed = def.fleeSpeed
+			else
+				if (waypoint - pos).Magnitude < 5 then
+					waypoint = clampGoal(home + Vector3.new(rng:NextNumber(-30, 30), rng:NextNumber(-6, 8), rng:NextNumber(-30, 30)), 5, S - 4)
+				end
+				goal = waypoint
+				speed = def.speed
+			end
 		end
 		steer(rec, clampGoal(goal, 5, S - 4), speed)
-		task.wait(0.15)
+		task.wait(dashing and 0.05 or 0.15)
+	end
+end
+
+-- Crabs scuttle sideways along the seabed, and dash sideways away when you come close.
+local function crabBrain(rec)
+	local def = rec.def
+	local home = rec.root.Position
+	local yaw = rng:NextNumber(0, math.pi * 2)
+	local right = CFrame.Angles(0, yaw, 0).RightVector
+	local phase = rng:NextNumber(0, math.pi * 2)
+	local lift = 0.55 * def.size
+	rec.ao.CFrame = CFrame.Angles(0, yaw, 0)
+
+	while alive(rec) do
+		local now = os.clock()
+		local pos = rec.root.Position
+		local threat = nearestDiver(pos, 12)
+		local target, speed
+		if threat or now - rec.hurtAt < 3 then
+			local from = threat and threat.hrp.Position or (pos - right)
+			local dir = (pos - from):Dot(right) >= 0 and 1 or -1
+			target = pos + right * dir * 8
+			speed = def.fleeSpeed
+		else
+			target = home + right * math.sin(now * 0.4 + phase) * 6
+			speed = def.speed
+		end
+		target = Config.clampToLagoon(target, 20)
+		rec.ap.Position = Vector3.new(target.X, floorAt(target.X, target.Z) + lift, target.Z)
+		rec.ap.MaxVelocity = speed
+		task.wait(0.2)
 	end
 end
 
@@ -419,7 +652,7 @@ local function sharkBrain(rec)
 			goal, speed = target.hrp.Position, def.chaseSpeed
 			local offset = pos - target.hrp.Position
 			if offset.Magnitude < def.biteRange and now - lastBite > def.biteCooldown then
-				target.hum:TakeDamage(def.biteDamage)
+				hurt(target, def.biteDamage)
 				lastBite = now
 				retreatUntil = now + 3
 				local away = offset.Magnitude > 0.1 and offset.Unit or Vector3.xAxis
@@ -482,7 +715,8 @@ local function squidBrain(rec)
 		end
 		waypoint = p
 		setTarget(nil)
-		nextHunt = now + rng:NextNumber(def.stalkGap[1], def.stalkGap[2])
+		-- hunts come round faster when there are high-level divers about
+		nextHunt = now + rng:NextNumber(def.stalkGap[1], def.stalkGap[2]) / (1 + 0.08 * (maxLevel() - 1))
 	end
 
 	while alive(rec) do
@@ -524,7 +758,7 @@ local function squidBrain(rec)
 		elseif state == "charge" and d then
 			goal, speed = d.hrp.Position, def.chargeSpeed
 			if (d.hrp.Position - pos).Magnitude < def.reach and now - lastHit > 1.5 then
-				d.hum:TakeDamage(def.damage)
+				hurt(d, def.damage)
 				lastHit = now
 				if ink then
 					ink:Emit(60)
@@ -541,7 +775,7 @@ local function squidBrain(rec)
 			end
 		end
 
-		if not rec.inked and rec.health < def.health * 0.35 then
+		if not rec.inked and rec.health < rec.maxHealth * 0.35 then
 			rec.inked = true
 			if ink then
 				ink:Emit(100)
@@ -557,7 +791,7 @@ local function squidBrain(rec)
 end
 
 local function sting(d, amount)
-	d.hum:TakeDamage(amount)
+	hurt(d, amount)
 	Remotes.Fx:FireClient(d.player, "sting", d.hrp.Position)
 end
 
@@ -594,10 +828,16 @@ local function jellyBrain(rec)
 	end
 end
 
-local BRAINS = { Fish = fishBrain, Shark = sharkBrain, Squid = squidBrain, Jelly = jellyBrain }
+local BRAINS = { Fish = fishBrain, Shark = sharkBrain, Squid = squidBrain, Jelly = jellyBrain, Crab = crabBrain }
 
 ---------------------------------------------------------------- spawning
 local function spawnPoint(def)
+	if def.type == "Crab" then
+		local centres = Config.reefCenters()
+		local c = centres[rng:NextInteger(1, #centres)]
+		local x, z = c.X + rng:NextNumber(-28, 28), c.Z + rng:NextNumber(-28, 28)
+		return Vector3.new(x, floorAt(x, z) + 0.6 * def.size, z)
+	end
 	if def.type == "Jelly" then
 		local p = Config.randomInLagoon(rng, 40)
 		return Vector3.new(p.X, rng:NextNumber(25, S - 15), p.Z)
@@ -625,15 +865,17 @@ function Creatures.spawn(kind)
 	if not def or not folder then
 		return
 	end
+	local stats = Config.creatureStats(def)
 	local model, root, barHeight = BUILDERS[def.type](spawnPoint(def), def)
 	model.Name = kind
 	local ap, ao = finish(model, root)
-	local bb, fill = healthBar(root, barHeight)
+	local bb, fill = healthBar(root, barHeight, kind, def.rarity or 1)
 
 	model:SetAttribute("Kind", kind)
 	model:SetAttribute("Type", def.type)
-	model:SetAttribute("Health", def.health)
-	model:SetAttribute("MaxHealth", def.health)
+	model:SetAttribute("Rarity", def.rarity or 1)
+	model:SetAttribute("Health", stats.health)
+	model:SetAttribute("MaxHealth", stats.health)
 	CollectionService:AddTag(model, "Creature")
 	model.Parent = folder
 	root:SetNetworkOwner(nil) -- the server drives creatures
@@ -647,7 +889,9 @@ function Creatures.spawn(kind)
 		ao = ao,
 		billboard = bb,
 		bar = fill,
-		health = def.health,
+		health = stats.health,
+		maxHealth = stats.health,
+		stats = stats,
 		hurtAt = 0,
 		attacker = nil,
 		dead = false,
@@ -679,13 +923,18 @@ function Creatures.damage(model, amount, player)
 	rec.hurtAt = os.clock()
 	rec.attacker = player
 	model:SetAttribute("Health", math.max(0, rec.health))
-	rec.bar.Size = UDim2.fromScale(math.clamp(rec.health / rec.def.health, 0, 1), 1)
+	rec.bar.Size = UDim2.fromScale(math.clamp(rec.health / rec.maxHealth, 0, 1), 1)
 	rec.billboard.Enabled = true
 
 	if rec.health <= 0 then
 		rec.dead = true
 		registry[model] = nil
-		Coins.drop(rec.root.Position, rec.def.reward)
+		-- rarer creatures pay more, and higher levels pay more on top
+		local bonus = Config.difficulty(levelOf(player)).reward
+		Coins.drop(rec.root.Position, math.floor(rec.stats.reward * bonus))
+		if player then
+			PlayerStats.addXP(player, rec.stats.xp)
+		end
 		if rec.def.type == "Squid" then
 			local who = player and player.DisplayName or "Someone"
 			Remotes.Announce:FireAllClients(who .. " slew the Giant Squid!")
@@ -727,6 +976,20 @@ function Creatures.start()
 			Creatures.spawn(kind)
 		end
 	end
+
+	-- every 3 levels the strongest diver reaches, another shark joins (up to 6 extra)
+	task.spawn(function()
+		local extra = 0
+		while true do
+			local want = math.min(6, math.floor((maxLevel() - 1) / 3))
+			while extra < want do
+				extra += 1
+				Creatures.spawn("Shark")
+				Remotes.Announce:FireAllClients("Another shark has entered the lagoon...")
+			end
+			task.wait(5)
+		end
+	end)
 end
 
 return Creatures

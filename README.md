@@ -6,12 +6,18 @@ An underwater Roblox game. You spawn on a raft in a lagoon in the middle of a tr
 
 - **The island:** a ring of sandy beaches and jungle hills with palm trees around the lagoon, little sandy islets inside it, a smoking volcano behind, and open ocean with more islands on the horizon
 - **The reef:** branching coral, brain coral, sea fans, tube coral, anemones, starfish, and kelp forests that sway
-- **Hunting:** snapper, mackerel, parrotfish, grouper and tuna you can shoot. They flee when you get close and drop gold coins when they die. Swim near the coins to pick them up. Harpoons have a slight aim assist
+- **Hunting:** 15+ species you can shoot, each with a rarity from 1 (Common) to 5 (Legendary). Rarer catches have more health but drop more coins and XP. Their name and stars show above them when hit. Harpoons have a slight aim assist
+  - Common: sardine, snapper, mackerel, damselfish, crab, jellyfish
+  - Uncommon: clownfish, parrotfish, butterflyfish, pufferfish
+  - Rare: grouper, tuna, barracuda, lionfish, king crab
+  - Epic: mahi-mahi (rarely dashes at you at huge speed), swordfish, shark
+  - Legendary: ocean sunfish, golden fish, giant squid
+- **Levels:** earn XP from kills and pearls. Each level makes creatures tougher and hit harder for you, but they pay more. Every 3 levels another shark joins the lagoon, and the squid hunts more often
 - **Jellyfish:** glowing and drifting. Swim into one and you get stung. Shoot one and the shock comes back down the line, so you get stung too
 - **Sharks:** patrol and chase you if you get close, or if you shoot them. Worth a lot of cash
 - **The Giant Squid:** lurks deep down. Every so often it picks a diver, follows them from behind, then charges. You'll get a warning when it's watching you. It inks and runs when badly hurt. While it hunts, a thunderstorm rolls in: dark sky, rain, lightning and choppy water. It's worth a fortune if you can kill it
 - **Harpoon shop:** the vending machine on the raft sells five harpoons, from Basic (free) up to the Legendary Kraken Slayer with splash damage
-- **Ambient life:** fish schools that scatter, manta rays, crabs, seagulls, and sea turtles swimming or resting on the beaches
+- **Ambient life:** decorative fish schools that scatter, manta rays, crabs, seagulls, and sea turtles swimming or resting on the beaches
 - **Beach hut:** a hut on stilts with a balcony, deck chairs and string lights looking out over the lagoon
 - **Oxygen:** go back up for air or you start drowning
 - **Saving:** money, pearls and owned harpoons save between sessions once the game's published

@@ -191,17 +191,22 @@ local function onFire(player, aimPoint)
 
 	Remotes.Fx:FireAllClients("shot", player, muzzle, endPos, def.id, travel)
 
+	-- creatures get tougher as you level up, so your shots do a bit less
+	local toughness = Config.difficulty(player:GetAttribute("Level") or 1).health
+	local damage = math.max(1, math.floor(def.damage / toughness + 0.5))
+
 	task.delay(travel, function()
 		if target then
-			local killed = Creatures.damage(target, def.damage, player)
-			Remotes.Fx:FireClient(player, "hit", endPos, def.damage, killed)
+			local killed = Creatures.damage(target, damage, player)
+			Remotes.Fx:FireClient(player, "hit", endPos, damage, killed)
 		end
 		if def.splash then
 			Remotes.Fx:FireAllClients("splash", endPos, def.splash, def.id)
+			local splashDamage = math.max(1, math.floor(damage * 0.5))
 			for _, other in Creatures.near(endPos, def.splash) do
 				if other ~= target then
-					local killed = Creatures.damage(other, math.floor(def.damage * 0.5), player)
-					Remotes.Fx:FireClient(player, "hit", endPos, math.floor(def.damage * 0.5), killed)
+					local killed = Creatures.damage(other, splashDamage, player)
+					Remotes.Fx:FireClient(player, "hit", endPos, splashDamage, killed)
 				end
 			end
 		end

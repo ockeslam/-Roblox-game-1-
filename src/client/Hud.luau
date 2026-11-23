@@ -194,6 +194,98 @@ function Hud.start()
 		end)
 	end)
 
+	-- level badge and XP bar, top left under the Roblox buttons
+	local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+	local xpFrame = Instance.new("Frame")
+	xpFrame.Position = UDim2.fromOffset(16, 64)
+	xpFrame.Size = UDim2.fromOffset(240, 44)
+	xpFrame.BackgroundColor3 = Color3.fromRGB(10, 30, 45)
+	xpFrame.BackgroundTransparency = 0.3
+	corner(xpFrame, 10)
+	xpFrame.Parent = gui
+
+	local levelText = Instance.new("TextLabel")
+	levelText.Position = UDim2.fromOffset(8, 2)
+	levelText.Size = UDim2.fromOffset(70, 40)
+	levelText.BackgroundTransparency = 1
+	levelText.Font = Enum.Font.FredokaOne
+	levelText.TextSize = 24
+	levelText.TextColor3 = Color3.fromRGB(255, 220, 90)
+	levelText.TextXAlignment = Enum.TextXAlignment.Left
+	levelText.Parent = xpFrame
+
+	local xpBack = Instance.new("Frame")
+	xpBack.Position = UDim2.fromOffset(80, 22)
+	xpBack.Size = UDim2.fromOffset(148, 10)
+	xpBack.BackgroundColor3 = Color3.fromRGB(30, 50, 70)
+	corner(xpBack, 5)
+	xpBack.Parent = xpFrame
+	local xpFill = Instance.new("Frame")
+	xpFill.Size = UDim2.fromScale(0, 1)
+	xpFill.BackgroundColor3 = Color3.fromRGB(120, 230, 255)
+	corner(xpFill, 5)
+	xpFill.Parent = xpBack
+
+	local xpText = Instance.new("TextLabel")
+	xpText.Position = UDim2.fromOffset(80, 4)
+	xpText.Size = UDim2.fromOffset(148, 16)
+	xpText.BackgroundTransparency = 1
+	xpText.Font = Enum.Font.Gotham
+	xpText.TextSize = 12
+	xpText.TextColor3 = Color3.fromRGB(200, 220, 235)
+	xpText.TextXAlignment = Enum.TextXAlignment.Left
+	xpText.Parent = xpFrame
+
+	local shownLevel = player:GetAttribute("Level") or 1
+	local lastXP = player:GetAttribute("XP") or 0
+	local joinedAt = os.clock()
+
+	local function updateXP()
+		local level = player:GetAttribute("Level") or 1
+		local xp = player:GetAttribute("XP") or 0
+		local need = Config.xpToNext(level)
+		levelText.Text = "Lv " .. level
+		xpText.Text = level >= Config.MaxLevel and "MAX LEVEL" or (xp .. " / " .. need .. " XP")
+		TweenService:Create(xpFill, TweenInfo.new(0.3), { Size = UDim2.fromScale(math.clamp(xp / need, 0, 1), 1) }):Play()
+	end
+
+	player:GetAttributeChangedSignal("XP"):Connect(function()
+		local xp = player:GetAttribute("XP") or 0
+		if xp > lastXP and os.clock() - joinedAt > 3 then
+			popText(gui, "+" .. (xp - lastXP) .. " XP", Color3.fromRGB(120, 230, 255), 0.58)
+		end
+		lastXP = xp
+		updateXP()
+	end)
+
+	player:GetAttributeChangedSignal("Level"):Connect(function()
+		local level = player:GetAttribute("Level") or 1
+		updateXP()
+		lastXP = player:GetAttribute("XP") or 0
+		if level > shownLevel and os.clock() - joinedAt > 3 then
+			local banner = Instance.new("TextLabel")
+			banner.AnchorPoint = Vector2.new(0.5, 0.5)
+			banner.Position = UDim2.fromScale(0.5, 0.3)
+			banner.Size = UDim2.fromOffset(560, 110)
+			banner.BackgroundTransparency = 1
+			banner.Font = Enum.Font.FredokaOne
+			banner.TextSize = 54
+			banner.TextColor3 = Color3.fromRGB(255, 220, 90)
+			banner.TextStrokeTransparency = 0.2
+			banner.RichText = true
+			banner.Text = "LEVEL " .. level .. '!\n<font size="22">The ocean gets tougher... but it pays more.</font>'
+			banner.Parent = gui
+			task.delay(3.5, function()
+				local t = TweenService:Create(banner, TweenInfo.new(1), { TextTransparency = 1, TextStrokeTransparency = 1 })
+				t:Play()
+				t.Completed:Wait()
+				banner:Destroy()
+			end)
+		end
+		shownLevel = level
+	end)
+	updateXP()
+
 	-- intro tip
 	local tip = Instance.new("TextLabel")
 	tip.AnchorPoint = Vector2.new(0.5, 0)
@@ -205,7 +297,7 @@ function Hud.start()
 	tip.TextSize = 18
 	tip.TextWrapped = true
 	tip.TextColor3 = Color3.new(1, 1, 1)
-	tip.Text = "Equip your harpoon (press 1) and click to shoot fish for cash. Spend it at the vending machine on the raft.\nGrab pearls, watch your oxygen, and keep an eye out for sharks... and worse."
+	tip.Text = "Equip your harpoon (press 1) and click to shoot fish. Rarer fish drop more cash and XP.\nSpend cash at the vending machine on the raft. Level up and the ocean gets tougher. Watch out for jellyfish, sharks... and worse."
 	corner(tip, 10)
 	tip.Parent = gui
 	task.delay(12, function()

@@ -1,4 +1,4 @@
--- Fish schools, sea turtles, manta rays and crabs (the jellyfish are real creatures now, see Creatures.luau).
+-- Decorative fish schools, sea turtles and manta rays. (Jellyfish, crabs and huntable fish are real creatures, see Creatures.luau.)
 -- They're made on each player's machine, so they move smoothly and cost the server nothing.
 -- Fish scatter when you or a shark swims through them.
 local Players = game:GetService("Players")
@@ -166,36 +166,12 @@ local function makeRay()
 	})
 end
 
----------------------------------------------------------------- crabs
-local crabs = {}
-
-local function makeCrab(home)
-	local red = Color3.fromRGB(220, 70, 40)
-	local crab = {
-		body = blob(Vector3.new(1.6, 0.7, 1.2), red),
-		claws = { blob(Vector3.new(0.6, 0.4, 0.5), red), blob(Vector3.new(0.6, 0.4, 0.5), red) },
-		legs = {},
-		home = home,
-		yaw = rng:NextNumber(0, math.pi * 2),
-		ph = rng:NextNumber(0, math.pi * 2),
-	}
-	for _ = 1, 6 do
-		table.insert(crab.legs, block(Vector3.new(0.9, 0.12, 0.12), red))
-	end
-	table.insert(crabs, crab)
-end
-
 ---------------------------------------------------------------- spawn everything
 local function spawnAll()
 	local centres = Config.reefCenters()
 	for _, c in centres do
 		local palette = PALETTES[rng:NextInteger(1, #PALETTES)]
 		makeSchool(c + Vector3.new(0, rng:NextNumber(12, 18), 0), 12, palette, 1, rng:NextNumber(10, 18))
-		for _ = 1, 2 do
-			local a = rng:NextNumber(0, math.pi * 2)
-			local pos = c + Vector3.new(math.cos(a) * rng:NextNumber(5, 20), 0, math.sin(a) * rng:NextNumber(5, 20))
-			makeCrab(Vector3.new(pos.X, 0, pos.Z))
-		end
 	end
 	-- big silver schools out in open water
 	for _ = 1, 3 do
@@ -310,25 +286,6 @@ local function step()
 			put(r.wings[i], cf * CFrame.new(side * 1.2, 0, 0) * CFrame.Angles(0, 0, side * flap) * CFrame.new(side * 3, 0, 0.3))
 		end
 		put(r.tail, cf * CFrame.new(0, 0, 4.8))
-	end
-
-	-- crabs: scuttle side to side
-	for _, c in crabs do
-		local right = CFrame.Angles(0, c.yaw, 0).RightVector
-		local x = math.sin(t * 0.6 + c.ph) * 4
-		local flat = c.home + right * x
-		local y = floorAt(flat.X, flat.Z)
-		local cf = CFrame.new(flat.X, y + 0.45 + math.abs(math.sin(t * 8 + c.ph)) * 0.08, flat.Z) * CFrame.Angles(0, c.yaw, 0)
-		put(c.body, cf)
-		for i, side in { -1, 1 } do
-			put(c.claws[i], cf * CFrame.new(side * 0.6, 0.1, -0.9))
-		end
-		for i, leg in c.legs do
-			local side = i <= 3 and -1 or 1
-			local row = (i - 1) % 3 - 1
-			local kick = math.sin(t * 10 + i + c.ph) * 0.3
-			put(leg, cf * CFrame.new(side * 0.8, -0.15, row * 0.4) * CFrame.Angles(0, kick, side * -0.4) * CFrame.new(side * 0.35, 0, 0))
-		end
 	end
 
 	workspace:BulkMoveTo(parts, cframes, Enum.BulkMoveMode.FireCFrameChanged)
