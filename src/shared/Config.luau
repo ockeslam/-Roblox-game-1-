@@ -64,16 +64,16 @@ end
 Config.Robux = {
 	-- Developer Products: can be bought again and again
 	Products = {
-		{ key = "CashSmall", id = 0, name = "Pouch of Cash", desc = "$500 to spend at the gun shop", cash = 500 },
-		{ key = "CashMedium", id = 0, name = "Chest of Cash", desc = "$2,500 to spend at the gun shop", cash = 2500 },
-		{ key = "CashLarge", id = 0, name = "Treasure Hoard", desc = "$10,000 to spend at the gun shop", cash = 10000 },
-		{ key = "XPBoost", id = 0, name = "Double XP (30 min)", desc = "All XP counts twice for 30 minutes", xpBoostMinutes = 30 },
+		{ key = "CashSmall", id = 3735379373, name = "Pouch of Cash", desc = "$500 to spend at the gun shop", cash = 500 },
+		{ key = "CashMedium", id = 3735379543, name = "Chest of Cash", desc = "$2,500 to spend at the gun shop", cash = 2500 },
+		{ key = "CashLarge", id = 3735379714, name = "Treasure Hoard", desc = "$10,000 to spend at the gun shop", cash = 10000 },
+		{ key = "XPBoost", id = 3735379895, name = "Double XP (30 min)", desc = "All XP counts twice for 30 minutes", xpBoostMinutes = 30 },
 	},
 	-- Passes: bought once, kept forever
 	Passes = {
-		{ key = "DoubleCash", id = 0, name = "Double Cash", desc = "Every coin you pick up is worth 2x, forever" },
-		{ key = "BigTank", id = 0, name = "Big Oxygen Tank", desc = "Your oxygen lasts twice as long" },
-		{ key = "GoldenHarpoon", id = 0, name = "Golden Harpoon", desc = "An exclusive gold gun with splash damage" },
+		{ key = "DoubleCash", id = 2094127714, name = "Double Cash", desc = "Every coin you pick up is worth 2x, forever" },
+		{ key = "BigTank", id = 2093323734, name = "Big Oxygen Tank", desc = "Your oxygen lasts twice as long" },
+		{ key = "GoldenHarpoon", id = 2096803536, name = "Golden Harpoon", desc = "An exclusive gold gun with splash damage" },
 	},
 }
 
