@@ -1,4 +1,4 @@
--- Pearls (score), oxygen, and saving.
+-- Money, pearls, oxygen, owned harpoons, and saving.
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
 local DataStoreService = game:GetService("DataStoreService")
@@ -18,12 +18,17 @@ end)
 local function setup(player)
 	local stats = Instance.new("Folder")
 	stats.Name = "leaderstats"
+	local money = Instance.new("IntValue")
+	money.Name = "Money"
+	money.Parent = stats
 	local pearls = Instance.new("IntValue")
 	pearls.Name = "Pearls"
 	pearls.Parent = stats
 	stats.Parent = player
 
 	player:SetAttribute("Oxygen", 100)
+	player:SetAttribute("Own_Basic", true)
+	player:SetAttribute("Equipped", "Basic")
 	player.CharacterAdded:Connect(function()
 		player:SetAttribute("Oxygen", 100)
 	end)
@@ -33,7 +38,20 @@ local function setup(player)
 			return store:GetAsync("p_" .. player.UserId)
 		end)
 		if ok and type(saved) == "number" then
-			pearls.Value = saved
+			pearls.Value = saved -- old save format
+		elseif ok and type(saved) == "table" then
+			money.Value = tonumber(saved.Money) or 0
+			pearls.Value = tonumber(saved.Pearls) or 0
+			if type(saved.Owned) == "table" then
+				for _, id in saved.Owned do
+					if Config.harpoon(id) then
+						player:SetAttribute("Own_" .. id, true)
+					end
+				end
+			end
+			if saved.Equipped and player:GetAttribute("Own_" .. tostring(saved.Equipped)) then
+				player:SetAttribute("Equipped", saved.Equipped)
+			end
 		end
 	end
 end
@@ -46,8 +64,20 @@ local function save(player)
 	if not stats then
 		return
 	end
+	local owned = {}
+	for _, h in Config.Harpoons do
+		if player:GetAttribute("Own_" .. h.id) then
+			table.insert(owned, h.id)
+		end
+	end
+	local data = {
+		Money = stats.Money.Value,
+		Pearls = stats.Pearls.Value,
+		Owned = owned,
+		Equipped = player:GetAttribute("Equipped"),
+	}
 	pcall(function()
-		store:SetAsync("p_" .. player.UserId, stats.Pearls.Value)
+		store:SetAsync("p_" .. player.UserId, data)
 	end)
 end
 
@@ -65,6 +95,7 @@ local function hookPearl(pearl)
 		end
 		ready = false
 		stats.Pearls.Value += 1
+		stats.Money.Value += Config.PearlMoney
 		pearl.Transparency = 1
 		if glow then
 			glow.Enabled = false

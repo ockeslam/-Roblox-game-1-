@@ -11,7 +11,7 @@ local Build = require(Shared:WaitForChild("Build"))
 
 local MarineLife = {}
 
-local S, H = Config.Surface, Config.Half
+local S, R = Config.Surface, Config.Radius
 local rng = Random.new(Config.Seed + 7)
 local folder: Folder
 
@@ -128,7 +128,7 @@ local function makeJelly()
 	table.insert(jellies, {
 		bell = bell,
 		tentacles = tentacles,
-		home = Vector3.new(rng:NextNumber(-H + 40, H - 40), rng:NextNumber(25, S - 15), rng:NextNumber(-H + 40, H - 40)),
+		home = Config.randomInLagoon(rng, 45) + Vector3.new(0, rng:NextNumber(25, S - 15), 0),
 		ph = rng:NextNumber(0, math.pi * 2),
 	})
 end
@@ -136,21 +136,46 @@ end
 ---------------------------------------------------------------- turtles
 local turtles = {}
 
-local function makeTurtle()
-	local shellCol = Color3.fromRGB(110, 95, 55)
+local SHELLS = { Color3.fromRGB(110, 95, 55), Color3.fromRGB(90, 105, 60), Color3.fromRGB(130, 90, 50) }
+
+-- beach = a CFrame to sit still on the sand; otherwise it swims in circles at depth y
+local function makeTurtle(y, beach)
 	local skin = Color3.fromRGB(120, 150, 90)
+	local size = rng:NextNumber(0.85, 1.3)
 	local t = {
-		shell = blob(Vector3.new(4, 1.4, 5), shellCol),
-		belly = blob(Vector3.new(3.6, 0.8, 4.6), Color3.fromRGB(220, 200, 140)),
-		head = blob(Vector3.new(1, 0.9, 1.5), skin),
-		front = { block(Vector3.new(2.6, 0.2, 1), skin), block(Vector3.new(2.6, 0.2, 1), skin) },
-		back = { block(Vector3.new(1.2, 0.2, 0.8), skin), block(Vector3.new(1.2, 0.2, 0.8), skin) },
-		centre = Vector3.new(rng:NextNumber(-H / 2, H / 2), rng:NextNumber(20, 40), rng:NextNumber(-H / 2, H / 2)),
+		size = size,
+		shell = blob(Vector3.new(4, 1.4, 5) * size, SHELLS[rng:NextInteger(1, #SHELLS)]),
+		belly = blob(Vector3.new(3.6, 0.8, 4.6) * size, Color3.fromRGB(220, 200, 140)),
+		head = blob(Vector3.new(1, 0.9, 1.5) * size, skin),
+		front = { block(Vector3.new(2.6, 0.2, 1) * size, skin), block(Vector3.new(2.6, 0.2, 1) * size, skin) },
+		back = { block(Vector3.new(1.2, 0.2, 0.8) * size, skin), block(Vector3.new(1.2, 0.2, 0.8) * size, skin) },
+		centre = Config.randomInLagoon(rng, 110) + Vector3.new(0, y or rng:NextNumber(20, 40), 0),
 		radius = rng:NextNumber(40, 70),
 		speed = rng:NextNumber(3, 5),
 		ph = rng:NextNumber(0, math.pi * 2),
+		beach = beach,
 	}
 	table.insert(turtles, t)
+end
+
+-- find spots on the beaches around the lagoon to put resting turtles
+local function beachSpots(count)
+	local spots = {}
+	for _ = 1, 200 do
+		if #spots >= count then
+			break
+		end
+		local a = rng:NextNumber(0, math.pi * 2)
+		local r = rng:NextNumber(R + 30, R + 55)
+		local x, z = math.cos(a) * r, math.sin(a) * r
+		local y = floorAt(x, z)
+		if y > S + 0.5 and y < S + 6 then
+			-- face the water
+			local cf = CFrame.lookAt(Vector3.new(x, y + 0.7, z), Vector3.new(0, y + 0.7, 0))
+			table.insert(spots, cf)
+		end
+	end
+	return spots
 end
 
 ---------------------------------------------------------------- manta rays
@@ -162,7 +187,7 @@ local function makeRay()
 		body = blob(Vector3.new(3, 0.8, 5), dark),
 		wings = { blob(Vector3.new(6, 0.35, 3.5), dark), blob(Vector3.new(6, 0.35, 3.5), dark) },
 		tail = block(Vector3.new(0.15, 0.15, 5), dark),
-		centre = Vector3.new(rng:NextNumber(-H / 2, H / 2), rng:NextNumber(30, 50), rng:NextNumber(-H / 2, H / 2)),
+		centre = Config.randomInLagoon(rng, 110) + Vector3.new(0, rng:NextNumber(30, 50), 0),
 		radius = rng:NextNumber(60, 100),
 		ph = rng:NextNumber(0, math.pi * 2),
 	})
@@ -201,14 +226,21 @@ local function spawnAll()
 	end
 	-- big silver schools out in open water
 	for _ = 1, 3 do
-		local home = Vector3.new(rng:NextNumber(-H / 2, H / 2), rng:NextNumber(30, 55), rng:NextNumber(-H / 2, H / 2))
+		local home = Config.randomInLagoon(rng, 70) + Vector3.new(0, rng:NextNumber(30, 55), 0)
 		makeSchool(home, 25, SILVER, 0.7, rng:NextNumber(35, 60))
 	end
 	for _ = 1, 14 do
 		makeJelly()
 	end
-	for _ = 1, 3 do
+	-- sea turtles: some cruise mid-water, some paddle near the surface, some rest on the beach
+	for _ = 1, 6 do
 		makeTurtle()
+	end
+	for _ = 1, 4 do
+		makeTurtle(rng:NextNumber(S - 8, S - 3))
+	end
+	for _, cf in beachSpots(6) do
+		makeTurtle(nil, cf)
 	end
 	for _ = 1, 2 do
 		makeRay()
@@ -223,11 +255,12 @@ local function threats()
 	if hrp then
 		table.insert(list, hrp.Position)
 	end
-	local sharks = workspace:FindFirstChild("Sharks")
-	if sharks then
-		for _, shark in sharks:GetChildren() do
-			if shark:IsA("Model") and shark.PrimaryPart then
-				table.insert(list, shark.PrimaryPart.Position)
+	local creatures = workspace:FindFirstChild("Creatures")
+	if creatures then
+		for _, c in creatures:GetChildren() do
+			local kind = c:GetAttribute("Type")
+			if c:IsA("Model") and c.PrimaryPart and (kind == "Shark" or kind == "Squid") then
+				table.insert(list, c.PrimaryPart.Position)
 			end
 		end
 	end
@@ -281,21 +314,30 @@ local function step()
 		end
 	end
 
-	-- turtles: big slow circles, flapping flippers
+	-- turtles: big slow circles with flapping flippers, or resting on the beach
 	for _, tu in turtles do
-		local function at(tt)
-			local a = tt * tu.speed / tu.radius + tu.ph
-			return tu.centre + Vector3.new(math.cos(a) * tu.radius, math.sin(tt * 0.2 + tu.ph) * 3, math.sin(a) * tu.radius)
+		local k = tu.size
+		local cf, flap, headY
+		if tu.beach then
+			cf = tu.beach
+			flap = math.sin(t * 0.6 + tu.ph) * 0.08
+			headY = 0.1 + math.max(0, math.sin(t * 0.4 + tu.ph)) * 0.35
+		else
+			local function at(tt)
+				local a = tt * tu.speed / tu.radius + tu.ph
+				return tu.centre + Vector3.new(math.cos(a) * tu.radius, math.sin(tt * 0.2 + tu.ph) * 3, math.sin(a) * tu.radius)
+			end
+			local pos = at(t)
+			cf = facing(pos, at(t + 0.2))
+			flap = math.sin(t * 2 + tu.ph) * 0.5
+			headY = 0.1
 		end
-		local pos = at(t)
-		local cf = facing(pos, at(t + 0.2))
-		put(tu.shell, cf * CFrame.new(0, 0.3, 0))
-		put(tu.belly, cf * CFrame.new(0, -0.1, 0))
-		put(tu.head, cf * CFrame.new(0, 0.1, -3))
-		local flap = math.sin(t * 2 + tu.ph) * 0.5
+		put(tu.shell, cf * CFrame.new(0, 0.3 * k, 0))
+		put(tu.belly, cf * CFrame.new(0, -0.1 * k, 0))
+		put(tu.head, cf * CFrame.new(0, headY * k, -3 * k))
 		for i, side in { -1, 1 } do
-			put(tu.front[i], cf * CFrame.new(side * 1.6, -0.1, -1.2) * CFrame.Angles(0, side * 0.3, side * flap) * CFrame.new(side * 1.2, 0, 0))
-			put(tu.back[i], cf * CFrame.new(side * 1.3, -0.1, 2.2) * CFrame.Angles(0, -side * 0.4, side * flap * 0.4) * CFrame.new(side * 0.5, 0, 0))
+			put(tu.front[i], cf * CFrame.new(side * 1.6 * k, -0.1 * k, -1.2 * k) * CFrame.Angles(0, side * 0.3, side * flap) * CFrame.new(side * 1.2 * k, 0, 0))
+			put(tu.back[i], cf * CFrame.new(side * 1.3 * k, -0.1 * k, 2.2 * k) * CFrame.Angles(0, -side * 0.4, side * flap * 0.4) * CFrame.new(side * 0.5 * k, 0, 0))
 		end
 	end
 
