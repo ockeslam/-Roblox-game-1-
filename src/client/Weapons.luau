@@ -54,14 +54,37 @@ local function hookTool(tool)
 			mouse.Icon = ""
 		end
 	end)
-	tool.Activated:Connect(function()
+	local holding = false
+	local function tryFire()
 		local def = Config.harpoon(tool:GetAttribute("HarpoonId"))
 		local now = os.clock()
 		if not def or now - lastFire < def.cooldown then
-			return
+			return def
 		end
 		lastFire = now
 		fireRemote:FireServer(aimPoint())
+		return def
+	end
+	tool.Activated:Connect(function()
+		local def = tryFire()
+		-- automatic guns keep firing while you hold the button
+		if def and def.auto and not holding then
+			holding = true
+			task.spawn(function()
+				while holding and tool.Parent == player.Character do
+					task.wait(def.cooldown)
+					if holding then
+						tryFire()
+					end
+				end
+			end)
+		end
+	end)
+	tool.Deactivated:Connect(function()
+		holding = false
+	end)
+	tool.Unequipped:Connect(function()
+		holding = false
 	end)
 end
 
@@ -109,7 +132,8 @@ local function drawShot(shooter, from, to, id, travel)
 	bolt.CanQuery = false
 	bolt.Material = Enum.Material.Neon
 	bolt.Color = def.colour
-	bolt.Size = Vector3.new(0.25, 0.25, 2.4)
+	local w = def.bolt or 0.25
+	bolt.Size = Vector3.new(w, w, def.look == "sonic" and 1.2 or 2.4)
 	bolt.CFrame = CFrame.lookAt(from, to)
 	bolt.Parent = workspace
 
@@ -121,7 +145,8 @@ local function drawShot(shooter, from, to, id, travel)
 	local tool = char and char:FindFirstChildOfClass("Tool")
 	local handle = tool and tool:FindFirstChild("Handle")
 	local muzzle = handle and handle:FindFirstChild("Muzzle")
-	if muzzle then
+	local roped = def.look == nil or def.look == "harpoon" or def.look == "triple"
+	if muzzle and roped then
 		local rope = Instance.new("Beam")
 		rope.Attachment0 = muzzle
 		rope.Attachment1 = boltAtt
@@ -140,6 +165,30 @@ local function drawShot(shooter, from, to, id, travel)
 		task.wait(0.25)
 		bolt:Destroy()
 	end)
+end
+
+-- jagged lightning between the creatures a trident chained through
+local function drawChain(points, id)
+	local def = Config.harpoon(id) or Config.Harpoons[1]
+	local model = Instance.new("Model")
+	for i = 1, #points - 1 do
+		local a, b = points[i], points[i + 1]
+		local mid = (a + b) / 2 + Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 3
+		for _, pair in { { a, mid }, { mid, b } } do
+			local p0, p1 = pair[1], pair[2]
+			local seg = Instance.new("Part")
+			seg.Anchored = true
+			seg.CanCollide = false
+			seg.CanQuery = false
+			seg.Material = Enum.Material.Neon
+			seg.Color = def.colour
+			seg.Size = Vector3.new(0.3, 0.3, (p1 - p0).Magnitude)
+			seg.CFrame = CFrame.lookAt((p0 + p1) / 2, p1)
+			seg.Parent = model
+		end
+	end
+	model.Parent = workspace
+	Debris:AddItem(model, 0.25)
 end
 
 local function drawSplash(pos, radius, id)
@@ -179,6 +228,8 @@ function Weapons.start()
 			damageNumber(pos, killed and ("-" .. dmg .. "  KILL!") or ("-" .. dmg), killed and Color3.fromRGB(255, 220, 60) or Color3.new(1, 1, 1))
 		elseif kind == "splash" then
 			drawSplash(...)
+		elseif kind == "chain" then
+			drawChain(...)
 		elseif kind == "sting" then
 			local pos = ...
 			damageNumber(pos + Vector3.new(0, 2, 0), "STUNG!", Color3.fromRGB(120, 230, 255))

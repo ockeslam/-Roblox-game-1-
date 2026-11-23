@@ -172,7 +172,8 @@ function Hud.start()
 	player:GetAttributeChangedSignal("Stalked"):Connect(updateStalked)
 
 	-- big announcements (squid appears / is killed)
-	local announce = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Announce")
+	local remotes = ReplicatedStorage:WaitForChild("Remotes")
+	local announce = remotes:WaitForChild("Announce")
 	announce.OnClientEvent:Connect(function(text)
 		local banner = Instance.new("TextLabel")
 		banner.AnchorPoint = Vector2.new(0.5, 0)
@@ -286,6 +287,63 @@ function Hud.start()
 	end)
 	updateXP()
 
+	-- kill feed, top right
+	local feed = Instance.new("Frame")
+	feed.AnchorPoint = Vector2.new(1, 0)
+	feed.Position = UDim2.new(1, -16, 0, 64)
+	feed.Size = UDim2.fromOffset(320, 200)
+	feed.BackgroundTransparency = 1
+	feed.Parent = gui
+	local feedLayout = Instance.new("UIListLayout")
+	feedLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	feedLayout.Padding = UDim.new(0, 4)
+	feedLayout.Parent = feed
+	remotes:WaitForChild("KillFeed").OnClientEvent:Connect(function(killer, victim)
+		local line = Instance.new("TextLabel")
+		line.Size = UDim2.fromOffset(320, 26)
+		line.BackgroundColor3 = Color3.fromRGB(10, 20, 30)
+		line.BackgroundTransparency = 0.35
+		line.Font = Enum.Font.GothamBold
+		line.TextSize = 15
+		line.TextColor3 = Color3.new(1, 1, 1)
+		line.RichText = true
+		line.Text = string.format('<font color="#ff8a5c">%s</font>  harpooned  <font color="#8fd8ff">%s</font>', killer, victim)
+		corner(line, 6)
+		line.Parent = feed
+		task.delay(6, function()
+			line:Destroy()
+		end)
+	end)
+
+	-- pressure warning in The Deep when your level is too low
+	local pressure = Instance.new("TextLabel")
+	pressure.AnchorPoint = Vector2.new(0.5, 0.5)
+	pressure.Position = UDim2.fromScale(0.5, 0.62)
+	pressure.Size = UDim2.fromOffset(640, 60)
+	pressure.BackgroundTransparency = 1
+	pressure.Font = Enum.Font.FredokaOne
+	pressure.TextSize = 30
+	pressure.TextColor3 = Color3.fromRGB(255, 90, 90)
+	pressure.TextStrokeTransparency = 0.3
+	pressure.Text = "TOO DEEP! The pressure is crushing you.\nReach level " .. Config.Deep.minLevel .. " to dive The Deep."
+	pressure.Visible = false
+	pressure.Parent = gui
+	player:GetAttributeChangedSignal("Pressure"):Connect(function()
+		pressure.Visible = player:GetAttribute("Pressure") == true
+	end)
+
+	-- banner when you swim into The Deep
+	local wasDeep = false
+	game:GetService("RunService").Heartbeat:Connect(function()
+		local char = player.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		local nowDeep = hrp ~= nil and Config.inDeep(hrp.Position)
+		if nowDeep and not wasDeep then
+			popText(gui, "THE DEEP", Color3.fromRGB(140, 180, 255), 0.3)
+		end
+		wasDeep = nowDeep
+	end)
+
 	-- intro tip
 	local tip = Instance.new("TextLabel")
 	tip.AnchorPoint = Vector2.new(0.5, 0)
@@ -297,7 +355,7 @@ function Hud.start()
 	tip.TextSize = 18
 	tip.TextWrapped = true
 	tip.TextColor3 = Color3.new(1, 1, 1)
-	tip.Text = "Equip your harpoon (press 1) and click to shoot fish. Rarer fish drop more cash and XP.\nSpend cash at the vending machine on the raft. Level up and the ocean gets tougher. Watch out for jellyfish, sharks... and worse."
+	tip.Text = "Press 1 for your gun and click to shoot. Rarer fish pay more cash and XP. Buy guns at the vending machine on the raft.\nPvP is on: other players can shoot you anywhere except the raft. The Deep lies through the east channel (level 10+)."
 	corner(tip, 10)
 	tip.Parent = gui
 	task.delay(12, function()

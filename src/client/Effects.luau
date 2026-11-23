@@ -1,4 +1,4 @@
--- Blue underwater tint and breathing bubbles.
+-- Blue underwater tint, breathing bubbles, and the darkness (plus a head torch) in The Deep.
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -24,6 +24,7 @@ function Effects.start()
 	blur.Parent = Lighting
 
 	local bubbles: ParticleEmitter? = nil
+	local headTorch: SpotLight? = nil
 	local head: BasePart? = nil
 
 	local function onCharacter(char)
@@ -50,6 +51,18 @@ function Effects.start()
 		pe.Parent = att
 
 		bubbles, head = pe, h
+
+		-- head torch that switches on in The Deep
+		local torch = Instance.new("SpotLight")
+		torch.Name = "HeadTorch"
+		torch.Face = Enum.NormalId.Front
+		torch.Angle = 70
+		torch.Range = 45
+		torch.Brightness = 3
+		torch.Color = Color3.fromRGB(220, 235, 255)
+		torch.Enabled = false
+		torch.Parent = h
+		headTorch = torch
 	end
 
 	local player = Players.LocalPlayer
@@ -59,10 +72,20 @@ function Effects.start()
 	end
 
 	RunService.RenderStepped:Connect(function()
-		local camY = workspace.CurrentCamera.CFrame.Position.Y
+		local camPos = workspace.CurrentCamera.CFrame.Position
+		local camY = camPos.Y
 		local under = camY < Config.Surface
 		tint.Enabled = under
 		blur.Enabled = under
+
+		-- The Deep gets darker and bluer the further down you go
+		local deep = Config.inDeep(camPos)
+		local darkness = deep and math.clamp((20 - camY) / 140, 0, 1) or 0
+		tint.Brightness = -0.45 * darkness
+		tint.TintColor = Color3.fromRGB(170, 220, 255):Lerp(Color3.fromRGB(90, 120, 255), darkness)
+		if headTorch then
+			headTorch.Enabled = deep
+		end
 		if bubbles and head and head.Parent then
 			bubbles.Enabled = head.Position.Y < Config.Surface - 1
 		end

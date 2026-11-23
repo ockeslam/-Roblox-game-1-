@@ -1,4 +1,4 @@
--- The vending machine menu: buy and equip harpoons, Basic up to Legendary.
+-- The vending machine menu: buy and equip guns, Basic up to Mythic. Better guns need higher levels.
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -40,7 +40,7 @@ function Shop.start()
 	local panel = Instance.new("Frame")
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromOffset(540, 470)
+	panel.Size = UDim2.fromOffset(580, 520)
 	panel.BackgroundColor3 = Color3.fromRGB(15, 30, 55)
 	panel.BackgroundTransparency = 0.05
 	corner(panel, 14)
@@ -55,7 +55,7 @@ function Shop.start()
 		Size = UDim2.new(1, -80, 0, 36),
 		Font = Enum.Font.FredokaOne,
 		TextSize = 30,
-		Text = "HARPOON SHOP",
+		Text = "GUN SHOP",
 	})
 	local moneyLabel = label(panel, {
 		Position = UDim2.new(1, -230, 0, 18),
@@ -76,10 +76,14 @@ function Shop.start()
 	corner(close, 8)
 	close.Parent = panel
 
-	local list = Instance.new("Frame")
+	local list = Instance.new("ScrollingFrame")
 	list.Position = UDim2.fromOffset(16, 60)
 	list.Size = UDim2.new(1, -32, 1, -100)
 	list.BackgroundTransparency = 1
+	list.BorderSizePixel = 0
+	list.ScrollBarThickness = 8
+	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	list.CanvasSize = UDim2.new()
 	list.Parent = panel
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 6)
@@ -97,7 +101,7 @@ function Shop.start()
 	for i, def in ipairs(Config.Harpoons) do
 		local row = Instance.new("Frame")
 		row.LayoutOrder = i
-		row.Size = UDim2.new(1, 0, 0, 66)
+		row.Size = UDim2.new(1, -12, 0, 66)
 		row.BackgroundColor3 = Color3.fromRGB(25, 45, 75)
 		corner(row, 10)
 		row.Parent = list
@@ -115,9 +119,18 @@ function Shop.start()
 			TextColor3 = def.colour,
 			Text = def.name .. "  ·  " .. def.rarity,
 		})
-		local stats = string.format("Damage %d   Reload %.2fs   Range %d", def.damage, def.cooldown, def.range)
+		local stats = string.format("Dmg %d   Reload %.2fs   Range %d", def.damage, def.cooldown, def.range)
+		if def.pellets then
+			stats ..= "   x" .. def.pellets .. " shots"
+		end
+		if def.auto then
+			stats ..= "   Full-auto"
+		end
 		if def.splash then
-			stats ..= "   Splash!"
+			stats ..= "   Splash"
+		end
+		if def.chain then
+			stats ..= "   Chain x" .. def.chain
 		end
 		label(row, {
 			Position = UDim2.fromOffset(20, 34),
@@ -150,6 +163,7 @@ function Shop.start()
 	local function refresh()
 		moneyLabel.Text = "$" .. money()
 		local equippedId = player:GetAttribute("Equipped") or "Basic"
+		local level = player:GetAttribute("Level") or 1
 		for id, row in rows do
 			local owned = player:GetAttribute("Own_" .. id) or row.def.price == 0
 			local b = row.button
@@ -159,6 +173,9 @@ function Shop.start()
 			elseif owned then
 				b.Text = "EQUIP"
 				b.BackgroundColor3 = Color3.fromRGB(40, 150, 220)
+			elseif level < (row.def.level or 1) then
+				b.Text = "LEVEL " .. row.def.level
+				b.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
 			else
 				b.Text = "BUY $" .. row.def.price
 				b.BackgroundColor3 = money() >= row.def.price and Color3.fromRGB(40, 170, 80) or Color3.fromRGB(110, 60, 60)
@@ -180,7 +197,7 @@ function Shop.start()
 	end)
 
 	player.AttributeChanged:Connect(function(name)
-		if gui.Enabled and (name == "Equipped" or string.sub(name, 1, 4) == "Own_") then
+		if gui.Enabled and (name == "Equipped" or name == "Level" or string.sub(name, 1, 4) == "Own_") then
 			refresh()
 		end
 	end)

@@ -5,6 +5,8 @@ local DataStoreService = game:GetService("DataStoreService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Coins = require(script.Parent.Coins)
+local Remotes = require(script.Parent.Remotes)
 
 local PlayerStats = {}
 
@@ -28,6 +30,9 @@ local function setup(player)
 	level.Name = "Level"
 	level.Value = 1
 	level.Parent = stats
+	local kills = Instance.new("IntValue")
+	kills.Name = "Kills"
+	kills.Parent = stats
 	stats.Parent = player
 
 	player:SetAttribute("Level", 1)
@@ -36,8 +41,14 @@ local function setup(player)
 	player:SetAttribute("Oxygen", 100)
 	player:SetAttribute("Own_Basic", true)
 	player:SetAttribute("Equipped", "Basic")
-	player.CharacterAdded:Connect(function()
+	player.CharacterAdded:Connect(function(char)
 		player:SetAttribute("Oxygen", 100)
+		local hum = char:WaitForChild("Humanoid", 10)
+		if hum then
+			hum.Died:Connect(function()
+				PlayerStats.onDeath(player, hum)
+			end)
+		end
 	end)
 
 	if store then
@@ -49,6 +60,7 @@ local function setup(player)
 		elseif ok and type(saved) == "table" then
 			money.Value = tonumber(saved.Money) or 0
 			pearls.Value = tonumber(saved.Pearls) or 0
+			kills.Value = tonumber(saved.Kills) or 0
 			local lvl = math.clamp(tonumber(saved.Level) or 1, 1, Config.MaxLevel)
 			player:SetAttribute("Level", lvl)
 			player:SetAttribute("XP", tonumber(saved.XP) or 0)
@@ -87,6 +99,7 @@ local function save(player)
 		Owned = owned,
 		Equipped = player:GetAttribute("Equipped"),
 		Level = player:GetAttribute("Level") or 1,
+		Kills = stats:FindFirstChild("Kills") and stats.Kills.Value or 0,
 		XP = player:GetAttribute("XP") or 0,
 	}
 	pcall(function()
@@ -113,6 +126,39 @@ function PlayerStats.addXP(player, amount)
 			stats.Level.Value = level
 		end
 	end
+end
+
+-- When a player dies: if another player hit them in the last 10 seconds, that player
+-- gets the kill, XP and a kill-feed line, and the victim drops some of their cash.
+function PlayerStats.onDeath(victim, hum)
+	local killerId = hum:GetAttribute("LastHitBy")
+	local hitAt = hum:GetAttribute("LastHitAt") or 0
+	if not killerId or os.clock() - hitAt > 10 then
+		return
+	end
+	local killer = Players:GetPlayerByUserId(killerId)
+	if not killer or killer == victim then
+		return
+	end
+
+	local victimLevel = victim:GetAttribute("Level") or 1
+	local stats = killer:FindFirstChild("leaderstats")
+	if stats and stats:FindFirstChild("Kills") then
+		stats.Kills.Value += 1
+	end
+	PlayerStats.addXP(killer, 25 + 5 * victimLevel)
+
+	local vStats = victim:FindFirstChild("leaderstats")
+	local money = vStats and vStats:FindFirstChild("Money")
+	local hrp = victim.Character and victim.Character:FindFirstChild("HumanoidRootPart")
+	if money and hrp then
+		local drop = math.min(Config.PvP.maxCashDrop, math.floor(money.Value * Config.PvP.cashDrop))
+		if drop > 0 then
+			money.Value -= drop
+			Coins.drop(hrp.Position, drop)
+		end
+	end
+	Remotes.KillFeed:FireAllClients(killer.DisplayName, victim.DisplayName)
 end
 
 local function hookPearl(pearl)
@@ -154,8 +200,9 @@ local function oxygenLoop()
 			local hum = char and char:FindFirstChildOfClass("Humanoid")
 			if head and hum and hum.Health > 0 then
 				local o = player:GetAttribute("Oxygen") or 100
+				local deep = Config.inDeep(head.Position)
 				if head.Position.Y < Config.Surface - 1 then
-					o -= 100 / Config.OxygenSeconds * dt
+					o -= 100 / Config.OxygenSeconds * dt * (deep and Config.Deep.oxygenDrain or 1)
 				else
 					o += Config.OxygenRefillPerSecond * dt
 				end
@@ -163,6 +210,15 @@ local function oxygenLoop()
 				player:SetAttribute("Oxygen", o)
 				if o <= 0 then
 					hum:TakeDamage(Config.DrownDamagePerSecond * dt)
+				end
+
+				-- The Deep crushes divers who aren't a high enough level
+				local tooLow = deep and (player:GetAttribute("Level") or 1) < Config.Deep.minLevel
+				if tooLow then
+					hum:TakeDamage(Config.Deep.pressureDamage * dt)
+				end
+				if (player:GetAttribute("Pressure") == true) ~= tooLow then
+					player:SetAttribute("Pressure", tooLow)
 				end
 			end
 		end

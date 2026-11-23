@@ -1,6 +1,6 @@
 # Reef Dive
 
-An underwater Roblox game. You spawn on a raft in a lagoon in the middle of a tropical island. Dive down, hunt fish with your harpoon for cash, buy better harpoons from the vending machine, and try not to get eaten.
+An online underwater Roblox game with PvP. You spawn on a raft in a lagoon in the middle of a tropical island. Dive down, hunt 40 species for cash and XP, buy better guns from the vending machine, level up, brave The Deep, and watch out for other players.
 
 ## What's in it
 
@@ -12,11 +12,25 @@ An underwater Roblox game. You spawn on a raft in a lagoon in the middle of a tr
   - Rare (4 of each, 45s): grouper, tuna, barracuda, triggerfish, lionfish, moray eel, stingray, king crab
   - Epic (2 of each, 90s): mahi-mahi (rarely dashes at you at huge speed), swordfish, hammerhead, marlin. Plus 4 sharks
   - Legendary (1 of each, 4 minutes): ocean sunfish, golden fish, coelacanth, giant squid
-- **Levels:** earn XP from kills and pearls. Each level makes creatures tougher and hit harder for you, but they pay more. Every 3 levels another shark joins the lagoon, and the squid hunts more often
+  - The Deep (level 10+): lanternfish, hatchetfish, giant isopod, glow jelly, anglerfish, viperfish, gulper eel, frilled shark, chimaera, oarfish
+- **Levels:** up to level 100. Earn XP from kills, pearls and PvP kills. Each level makes creatures tougher and hit harder for you, but they pay more. Better guns need higher levels. Every 3 levels another shark joins the lagoon, and the squid hunts more often
+- **The Deep:** a dark trench through the channel on the east side of the island, past the red buoy. It's pitch black (your head torch switches on), oxygen runs out faster, and below level 10 the pressure hurts you
+- **PvP:** guns hurt other players everywhere except on the raft. You get 5 seconds of spawn protection. A PvP kill gives XP and adds to your Kills, and the victim drops 10% of their cash (up to $500) as coins. Kills show in the top-right feed
 - **Jellyfish:** glowing and drifting. Swim into one and you get stung. Shoot one and the shock comes back down the line, so you get stung too
 - **Sharks:** patrol and chase you if you get close, or if you shoot them. Worth a lot of cash
 - **The Giant Squid:** lurks deep down. Every so often it picks a diver, follows them from behind, then charges. You'll get a warning when it's watching you. It inks and runs when badly hurt. While it hunts, a thunderstorm rolls in: dark sky, rain, lightning and choppy water. It's worth a fortune if you can kill it
-- **Harpoon shop:** the vending machine on the raft sells five harpoons, from Basic (free) up to the Legendary Kraken Slayer with splash damage
+- **Gun shop:** the vending machine on the raft sells 11 guns:
+  - Basic Harpoon (free)
+  - Reef Harpoon
+  - Tide Harpoon
+  - Triple Spear (3-shot spread)
+  - Abyss Harpoon
+  - Sonic Blaster (full-auto)
+  - Torpedo Launcher (slow, big splash)
+  - Kraken Slayer (splash)
+  - Storm Trident (chain lightning)
+  - Leviathan Cannon (5-shot spread with splash)
+  - Poseidon's Wrath (chain and splash, level 50)
 - **Ambient life:** decorative fish schools that scatter, manta rays, crabs, seagulls, and sea turtles swimming or resting on the beaches
 - **Beach hut:** a hut on stilts with a balcony, deck chairs and string lights looking out over the lagoon
 - **Oxygen:** go back up for air or you start drowning
@@ -48,6 +62,14 @@ rojo build -o ReefDive.rbxl
 ```
 
 Or, with `rojo serve` running and connected, just `git pull` and Studio updates by itself.
+
+## Playing online with other people
+
+1. In Studio: **File → Publish to Roblox**
+2. On create.roblox.com, open the game, go to **Settings**, set it to **Public**, and set the max players (e.g. 20)
+3. For saving to work: in Studio, **Game Settings → Security → Enable Studio Access to API Services**
+
+To test PvP on your own: in Studio's **Test** tab, choose **Clients and Servers** with 2 players and press **Start**. Two game windows open and you can shoot each other.
 
 ## Sounds
 

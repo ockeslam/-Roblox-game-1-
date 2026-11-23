@@ -3,7 +3,7 @@ local Config = {
 	Seed = 1337, -- change this to get a different map layout
 
 	Surface = 80, -- height of the water surface (studs)
-	Radius = 190, -- radius of the lagoon
+	Radius = 240, -- radius of the lagoon
 
 	-- Oxygen
 	OxygenSeconds = 60, -- how long you can stay under
@@ -11,7 +11,7 @@ local Config = {
 	DrownDamagePerSecond = 10,
 
 	-- Pearls
-	ClamCount = 25,
+	ClamCount = 35,
 	PearlRespawn = 30,
 	PearlMoney = 10, -- each pearl is also worth this much cash
 
@@ -20,8 +20,8 @@ local Config = {
 	CoinPickupRange = 8,
 
 	-- Reef
-	ReefCount = 6,
-	KelpForests = 4,
+	ReefCount = 9,
+	KelpForests = 6,
 
 	-- Harpoon aim assist: if you miss by less than this many degrees, the shot bends onto the target
 	AimAssistDegrees = 4,
@@ -29,6 +29,34 @@ local Config = {
 	-- Birds flying over the island
 	BirdCount = 16,
 }
+
+-- The Deep: a dark trench beyond the island, reached through a channel on the east side.
+Config.Deep = {
+	centre = Vector3.new(Config.Radius + 300, -50, 0),
+	radius = 130,
+	minLevel = 10, -- below this level the pressure hurts you
+	pressureDamage = 15, -- per second when you're too low a level
+	oxygenDrain = 1.6, -- oxygen runs out this much faster down there
+}
+
+function Config.inDeep(pos: Vector3)
+	local d = Config.Deep
+	return pos.X > Config.Radius + 120 and (pos - d.centre).Magnitude < d.radius + 5 and pos.Y < Config.Surface - 2
+end
+
+-- PvP: harpoons hurt other players everywhere except the raft.
+Config.PvP = {
+	enabled = true,
+	damageMult = 0.6, -- player hits do this fraction of the gun's damage
+	safeRadius = 20, -- around the raft
+	spawnProtection = 5, -- seconds of forcefield after respawning
+	cashDrop = 0.1, -- you drop this share of your cash when killed by a player
+	maxCashDrop = 500,
+}
+
+function Config.inSafeZone(pos: Vector3)
+	return Vector3.new(pos.X, 0, pos.Z).Magnitude < Config.PvP.safeRadius and pos.Y > Config.Surface - 6
+end
 
 -- Sounds. Leave "" to use the built-in placeholder sound.
 -- To use a better one: in Studio open Toolbox > Creator Store > Audio, search
@@ -147,6 +175,29 @@ Config.Creatures = {
 		body = Vector3.new(0.8, 1.3, 2.8), colours = { rgb(255, 200, 40), rgb(255, 235, 120) }, glow = true },
 	Coelacanth = { type = "Fish", rarity = 5, healthMult = 1.2, speed = 4, fleeSpeed = 9, bottom = true,
 		body = Vector3.new(1.4, 2, 5.5), colours = { rgb(40, 60, 110), rgb(90, 110, 160) }, spots = true },
+	---------------- The Deep (only found in the trench)
+	Lanternfish = { type = "Fish", rarity = 1, zone = "Deep", speed = 6, fleeSpeed = 12,
+		body = Vector3.new(0.5, 0.9, 2), colours = { rgb(40, 50, 70), rgb(80, 90, 110) }, glowSpots = rgb(80, 220, 255) },
+	Hatchetfish = { type = "Fish", rarity = 2, zone = "Deep", speed = 5, fleeSpeed = 11,
+		body = Vector3.new(0.35, 2, 1.8), colours = { rgb(200, 210, 225), rgb(150, 160, 180) }, glowSpots = rgb(120, 200, 255) },
+	GiantIsopod = { type = "Crab", rarity = 2, zone = "Deep", size = 1.5, speed = 2, fleeSpeed = 4,
+		colours = { rgb(170, 160, 150), rgb(210, 200, 190) } },
+	GlowJelly = { type = "Jelly", rarity = 2, zone = "Deep", speed = 2,
+		sting = 14, shootSting = 8, stingRange = 4, stingCooldown = 1.5,
+		colours = { rgb(60, 120, 255), rgb(0, 255, 200), rgb(200, 80, 255) } },
+	Anglerfish = { type = "Fish", rarity = 3, zone = "Deep", healthMult = 1.2, speed = 3, fleeSpeed = 8,
+		body = Vector3.new(1.8, 1.8, 2.6), colours = { rgb(50, 40, 45), rgb(80, 60, 60) }, lure = true, fangs = true },
+	Viperfish = { type = "Fish", rarity = 3, zone = "Deep", speed = 7, fleeSpeed = 14,
+		body = Vector3.new(0.6, 1, 4), colours = { rgb(30, 40, 60), rgb(60, 80, 110) }, fangs = true, glowSpots = rgb(120, 180, 255) },
+	GulperEel = { type = "Fish", rarity = 3, zone = "Deep", speed = 5, fleeSpeed = 10, eel = true,
+		body = Vector3.new(1.4, 1.6, 7), colours = { rgb(25, 25, 35), rgb(55, 50, 70) }, glowSpots = rgb(255, 80, 140) },
+	FrilledShark = { type = "Fish", rarity = 4, zone = "Deep", healthMult = 1.3, speed = 6, fleeSpeed = 13, eel = true, fangs = true,
+		body = Vector3.new(1.3, 1.5, 9), colours = { rgb(80, 70, 65), rgb(130, 115, 105) } },
+	Chimaera = { type = "Fish", rarity = 4, zone = "Deep", speed = 5, fleeSpeed = 12,
+		body = Vector3.new(1.2, 1.8, 5), colours = { rgb(150, 150, 170), rgb(200, 200, 215) }, glowSpots = rgb(180, 255, 220) },
+	Oarfish = { type = "Fish", rarity = 5, zone = "Deep", healthMult = 1.4, speed = 3, fleeSpeed = 7, eel = true, sail = true,
+		body = Vector3.new(0.8, 2, 16), colours = { rgb(210, 215, 225), rgb(230, 60, 70) } },
+
 	Squid = { type = "Squid", rarity = 5, count = 1, healthMult = 2.7, rewardMult = 3, respawn = 180,
 		speed = 6, stalkSpeed = 13,
 		chargeSpeed = 21, -- faster than you, so you can't outswim the charge
@@ -173,7 +224,7 @@ end
 
 -- Levels: you earn XP from kills and pearls. Each level makes creatures tougher
 -- and hit harder (for you), but they pay out more.
-Config.MaxLevel = 50
+Config.MaxLevel = 100
 
 function Config.xpToNext(level)
 	return math.floor(100 * level ^ 1.4)
@@ -188,13 +239,33 @@ function Config.difficulty(level)
 	}
 end
 
--- Harpoon guns, cheapest first. splash = legendary area damage radius.
+-- Guns, cheapest first. level = level you need to buy it.
+-- Extras: pellets + spread (shotgun), auto (hold to fire), splash (area damage), chain (lightning jumps),
+-- look = how it's built (harpoon, triple, sonic, torpedo, trident, cannon), bolt = projectile size.
+local MYTHIC = Color3.fromRGB(255, 60, 110)
 Config.Harpoons = {
-	{ id = "Basic", name = "Basic Harpoon", rarity = "Basic", price = 0, damage = 20, cooldown = 0.7, range = 60, speed = 110, colour = Color3.fromRGB(175, 175, 175) },
-	{ id = "Uncommon", name = "Reef Harpoon", rarity = "Uncommon", price = 100, damage = 30, cooldown = 0.55, range = 70, speed = 130, colour = Color3.fromRGB(90, 210, 90) },
-	{ id = "Rare", name = "Tide Harpoon", rarity = "Rare", price = 300, damage = 45, cooldown = 0.45, range = 85, speed = 150, colour = Color3.fromRGB(70, 140, 255) },
-	{ id = "Epic", name = "Abyss Harpoon", rarity = "Epic", price = 800, damage = 70, cooldown = 0.35, range = 100, speed = 170, colour = Color3.fromRGB(175, 80, 255) },
-	{ id = "Legendary", name = "Kraken Slayer", rarity = "Legendary", price = 2000, damage = 110, cooldown = 0.25, range = 120, speed = 200, colour = Color3.fromRGB(255, 200, 50), splash = 10 },
+	{ id = "Basic", name = "Basic Harpoon", rarity = "Basic", level = 1, price = 0,
+		damage = 20, cooldown = 0.7, range = 60, speed = 110, colour = Color3.fromRGB(175, 175, 175), look = "harpoon" },
+	{ id = "Uncommon", name = "Reef Harpoon", rarity = "Uncommon", level = 1, price = 100,
+		damage = 30, cooldown = 0.55, range = 70, speed = 130, colour = Color3.fromRGB(90, 210, 90), look = "harpoon" },
+	{ id = "Rare", name = "Tide Harpoon", rarity = "Rare", level = 3, price = 300,
+		damage = 45, cooldown = 0.45, range = 85, speed = 150, colour = Color3.fromRGB(70, 140, 255), look = "harpoon" },
+	{ id = "Triple", name = "Triple Spear", rarity = "Rare", level = 5, price = 500,
+		damage = 20, cooldown = 0.75, range = 55, speed = 140, colour = Color3.fromRGB(70, 200, 255), look = "triple", pellets = 3, spread = 6 },
+	{ id = "Epic", name = "Abyss Harpoon", rarity = "Epic", level = 8, price = 800,
+		damage = 70, cooldown = 0.35, range = 100, speed = 170, colour = Color3.fromRGB(175, 80, 255), look = "harpoon" },
+	{ id = "Sonic", name = "Sonic Blaster", rarity = "Epic", level = 12, price = 1200,
+		damage = 14, cooldown = 0.12, range = 70, speed = 220, colour = Color3.fromRGB(0, 255, 220), look = "sonic", auto = true, bolt = 0.18 },
+	{ id = "Torpedo", name = "Torpedo Launcher", rarity = "Epic", level = 15, price = 1600,
+		damage = 90, cooldown = 1.4, range = 110, speed = 65, colour = Color3.fromRGB(255, 140, 40), look = "torpedo", splash = 14, bolt = 0.8 },
+	{ id = "Legendary", name = "Kraken Slayer", rarity = "Legendary", level = 18, price = 2000,
+		damage = 110, cooldown = 0.25, range = 120, speed = 200, colour = Color3.fromRGB(255, 200, 50), look = "harpoon", splash = 10 },
+	{ id = "Trident", name = "Storm Trident", rarity = "Legendary", level = 25, price = 3500,
+		damage = 85, cooldown = 0.4, range = 110, speed = 260, colour = Color3.fromRGB(150, 200, 255), look = "trident", chain = 3 },
+	{ id = "Leviathan", name = "Leviathan Cannon", rarity = "Mythic", level = 35, price = 6000,
+		damage = 45, cooldown = 0.6, range = 90, speed = 180, colour = MYTHIC, look = "cannon", pellets = 5, spread = 8, splash = 6, bolt = 0.45 },
+	{ id = "Poseidon", name = "Poseidon's Wrath", rarity = "Mythic", level = 50, price = 12000,
+		damage = 200, cooldown = 0.3, range = 140, speed = 300, colour = Color3.fromRGB(255, 240, 150), look = "trident", chain = 4, splash = 12 },
 }
 
 function Config.harpoon(id)
@@ -204,6 +275,18 @@ function Config.harpoon(id)
 		end
 	end
 	return nil
+end
+
+-- Random point inside the Deep trench, at least `margin` studs from its walls.
+function Config.randomInDeep(rng: Random, margin: number)
+	local d = Config.Deep
+	for _ = 1, 50 do
+		local p = d.centre + Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-1, 1), rng:NextNumber(-1, 1)) * (d.radius - margin)
+		if (p - d.centre).Magnitude < d.radius - margin and p.Y < Config.Surface - 15 then
+			return p
+		end
+	end
+	return d.centre
 end
 
 -- Random point on the lagoon floor plan (Y = 0), at least `margin` studs from the shore.

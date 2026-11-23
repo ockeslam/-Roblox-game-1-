@@ -23,4 +23,5 @@ return {
 	Fx = get("RemoteEvent", "HarpoonFx"), -- server -> clients: draw shots and hits
 	Buy = get("RemoteFunction", "BuyHarpoon"), -- client -> server: buy or equip a harpoon
 	Announce = get("RemoteEvent", "Announce"), -- server -> clients: big messages
+	KillFeed = get("RemoteEvent", "KillFeed"), -- server -> clients: "X harpooned Y"
 }

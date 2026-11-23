@@ -164,12 +164,46 @@ local function buildTerrain()
 	end
 	terrain:FillCylinder(CFrame.new(VOLCANO.X, 40 + layers * 5 - 2, VOLCANO.Z), 6, 12, Enum.Material.CrackedLava)
 
+	-- a channel cut through the island on the east side, out to The Deep
+	local deep = Config.Deep
+	local channelStart, channelEnd = R - 20, deep.centre.X - deep.radius + 30
+	local channelMid = (channelStart + channelEnd) / 2
+	local channelLen = channelEnd - channelStart
+	terrain:FillBlock(CFrame.new(channelMid, S / 2 + 2, 0), Vector3.new(channelLen, S - 4, 44), Enum.Material.Water)
+	terrain:FillBlock(CFrame.new(channelMid, S + 60, 0), Vector3.new(channelLen, 120, 44), Enum.Material.Air)
+	-- rocky channel walls under the water so it reads as a passage
+	for x = channelStart, channelEnd, 14 do
+		for _, side in { -1, 1 } do
+			terrain:FillBall(Vector3.new(x, rng:NextNumber(5, 30), side * 28), rng:NextNumber(8, 12), Enum.Material.Slate)
+		end
+	end
+
+	-- The Deep: a huge dark bowl in the sea floor. Solid rock round it first,
+	-- because the normal seabed is only 24 studs thick.
+	local rockSize = deep.radius * 2 + 40
+	terrain:FillBlock(
+		CFrame.new(deep.centre.X, (-24 + deep.centre.Y - deep.radius - 20) / 2, deep.centre.Z),
+		Vector3.new(rockSize, (deep.centre.Y - deep.radius - 20 - -24) * -1, rockSize),
+		Enum.Material.Slate
+	)
+	terrain:FillBall(deep.centre, deep.radius, Enum.Material.Water)
+	-- jagged rock spires on the bottom
+	for _ = 1, 14 do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local r = rng:NextNumber(0, deep.radius * 0.6)
+		local base = deep.centre + Vector3.new(math.cos(a) * r, -deep.radius * 0.75, math.sin(a) * r)
+		local h = rng:NextNumber(3, 6)
+		for k = 0, h do
+			terrain:FillBall(base + Vector3.new(rng:NextNumber(-2, 2), k * 9, rng:NextNumber(-2, 2)), 10 - k * 1.3, Enum.Material.Basalt)
+		end
+	end
+
 	-- distant islands on the horizon
 	for _ = 1, 6 do
 		local a = rng:NextNumber(0, math.pi * 2)
 		local d = rng:NextNumber(600, 850)
 		local c = Vector3.new(math.cos(a) * d, 0, math.sin(a) * d)
-		if (c - VOLCANO).Magnitude > 320 then
+		if (c - VOLCANO).Magnitude > 320 and (c - Vector3.new(deep.centre.X, 0, 0)).Magnitude > 260 then
 			local r = rng:NextNumber(50, 80)
 			terrain:FillBall(c + Vector3.new(0, S + 5 - r * 1.2, 0), r * 1.2, Enum.Material.Sand)
 			terrain:FillBall(c + Vector3.new(0, S + 30 - r * 0.8, 0), r * 0.8, Enum.Material.LeafyGrass)
@@ -285,7 +319,7 @@ end
 local function scatterPalms(parent)
 	local placed = 0
 	for _ = 1, 500 do
-		if placed >= 75 then
+		if placed >= 100 then
 			break
 		end
 		local a = rng:NextNumber(0, math.pi * 2)
@@ -528,8 +562,9 @@ local function buildVendingMachine(base, parent)
 		Transparency = 0.5,
 		CanQuery = false,
 	}, m)
-	for i, def in ipairs(Config.Harpoons) do
-		local y = 2.6 + (i - 1) * 1.2
+	for i = 1, 6 do
+		local def = Config.Harpoons[math.min(#Config.Harpoons, i * 2 - 1)]
+		local y = 2.6 + (i - 1) * 1.0
 		Build.part({
 			Size = Vector3.new(4, 0.15, 2.5),
 			CFrame = cf * CFrame.new(-0.6, y - 0.35, 0.4),
@@ -619,7 +654,7 @@ local function buildRaft()
 	spawn.Name = "RaftSpawn"
 	spawn.Anchored = true
 	spawn.Neutral = true
-	spawn.Duration = 0
+	spawn.Duration = Config.PvP.spawnProtection
 	spawn.Size = Vector3.new(10, 0.4, 10)
 	spawn.CFrame = CFrame.new(-4, S + 1.8, 4)
 	spawn.Color = Color3.fromRGB(170, 125, 75)
@@ -876,6 +911,68 @@ local function buildClam(pos, parent)
 	model.Parent = parent
 end
 
+---------------------------------------------------------------- The Deep: glowing vents and a warning buoy
+local function buildDeepDetails()
+	local deep = Config.Deep
+	local f = folder("TheDeep")
+	for _ = 1, 8 do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local r = rng:NextNumber(0, deep.radius * 0.6)
+		local x, z = deep.centre.X + math.cos(a) * r, deep.centre.Z + math.sin(a) * r
+		local hit = workspace:Raycast(Vector3.new(x, S - 10, z), Vector3.new(0, -400, 0), rayParams)
+		if hit then
+			local vent = Build.part({
+				Name = "Vent",
+				Shape = Enum.PartType.Cylinder,
+				Size = Vector3.new(4, 5, 5),
+				CFrame = CFrame.new(hit.Position + Vector3.new(0, 1.5, 0)) * CFrame.Angles(0, 0, math.pi / 2),
+				Color = Color3.fromRGB(255, 110, 30),
+				Material = Enum.Material.Neon,
+			}, f)
+			local light = Instance.new("PointLight")
+			light.Color = Color3.fromRGB(255, 120, 40)
+			light.Range = 30
+			light.Brightness = 3
+			light.Parent = vent
+			local bubbles = Instance.new("ParticleEmitter")
+			bubbles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+			bubbles.Color = ColorSequence.new(Color3.fromRGB(255, 200, 150))
+			bubbles.Size = NumberSequence.new(0.4, 0.8)
+			bubbles.Transparency = NumberSequence.new(0.3, 1)
+			bubbles.Lifetime = NumberRange.new(4, 6)
+			bubbles.Rate = 15
+			bubbles.Speed = NumberRange.new(6, 10)
+			bubbles.SpreadAngle = Vector2.new(10, 10)
+			bubbles.EmissionDirection = Enum.NormalId.Right -- the cylinder's axis is turned upright
+			bubbles.Parent = vent
+		end
+	end
+
+	-- buoy at the mouth of the channel with a warning
+	local buoyPos = Vector3.new(deep.centre.X - deep.radius + 20, S + 2, 14)
+	local buoy = Build.part({
+		Name = "DeepBuoy",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.one * 4,
+		CFrame = CFrame.new(buoyPos),
+		Color = Color3.fromRGB(230, 60, 50),
+	}, f)
+	local sign = Instance.new("BillboardGui")
+	sign.Size = UDim2.fromOffset(300, 70)
+	sign.StudsOffset = Vector3.new(0, 5, 0)
+	sign.MaxDistance = 250
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.TextColor3 = Color3.fromRGB(255, 120, 120)
+	label.TextStrokeTransparency = 0.3
+	label.Text = "THE DEEP\nLevel " .. deep.minLevel .. "+"
+	label.Parent = sign
+	sign.Parent = buoy
+end
+
 ---------------------------------------------------------------- build it all
 function World.build()
 	chooseIslets()
@@ -886,6 +983,7 @@ function World.build()
 	volcanoSmoke()
 
 	buildBeachHut(workspace)
+	buildDeepDetails()
 	scatterPalms(folder("Palms"))
 
 	local reefFolder = folder("Reefs")

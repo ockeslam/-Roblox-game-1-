@@ -41,7 +41,7 @@ floorParams.FilterType = Enum.RaycastFilterType.Include
 floorParams.FilterDescendantsInstances = { workspace.Terrain }
 
 local function floorAt(x, z)
-	local hit = workspace:Raycast(Vector3.new(x, S + 40, z), Vector3.new(0, -S - 100, 0), floorParams)
+	local hit = workspace:Raycast(Vector3.new(x, S + 40, z), Vector3.new(0, -S - 300, 0), floorParams)
 	return hit and hit.Position.Y or 0
 end
 
@@ -50,7 +50,18 @@ local function point(minY, maxY, margin)
 	return Vector3.new(p.X, rng:NextNumber(minY, maxY), p.Z)
 end
 
-local function clampGoal(p, minY, maxY)
+local function clampGoal(p, minY, maxY, zone)
+	if zone == "Deep" then
+		-- stay inside the trench bowl and under the surface
+		local d = Config.Deep
+		local off = p - d.centre
+		local maxR = d.radius - 14
+		if off.Magnitude > maxR then
+			off = off.Unit * maxR
+		end
+		local q = d.centre + off
+		return Vector3.new(q.X, math.min(q.Y, S - 6), q.Z)
+	end
 	local c = Config.clampToLagoon(p, 15)
 	return Vector3.new(c.X, math.clamp(c.Y, minY or 6, maxY or S - 5), c.Z)
 end
@@ -286,6 +297,60 @@ local function buildFish(pos, def)
 			CFrame = cf * CFrame.new(0, b.Y * 0.85, 0),
 			Color = main,
 		}, model))
+	end
+
+	-- anglerfish lure: a stalk with a glowing bulb
+	if def.lure then
+		local base = cf:PointToWorldSpace(Vector3.new(0, b.Y * 0.45, -b.Z * 0.3))
+		local tip = cf:PointToWorldSpace(Vector3.new(0, b.Y * 1.1, -b.Z * 0.8))
+		weld(root, Build.cylinderBetween(base, tip, 0.12, { Color = main }, model))
+		local bulb = weld(root, Build.part({
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.one * 0.6,
+			CFrame = CFrame.new(tip),
+			Color = Color3.fromRGB(180, 255, 230),
+			Material = Enum.Material.Neon,
+		}, model))
+		local l = Instance.new("PointLight")
+		l.Color = Color3.fromRGB(150, 255, 220)
+		l.Range = 16
+		l.Brightness = 2.5
+		l.Parent = bulb
+	end
+
+	-- fangs
+	if def.fangs then
+		for i = -2, 2 do
+			if i ~= 0 then
+				local p = cf:PointToWorldSpace(Vector3.new(i * b.X * 0.12, -b.Y * 0.1, -b.Z * 0.47))
+				weld(root, Build.part({
+					Size = Vector3.new(0.08, b.Y * 0.35, 0.08),
+					CFrame = CFrame.new(p) * CFrame.Angles(0.3, 0, 0),
+					Color = Color3.fromRGB(240, 240, 230),
+				}, model))
+			end
+		end
+	end
+
+	-- glowing spots along the sides (deep-sea fish)
+	if def.glowSpots then
+		for _, side in { -1, 1 } do
+			for k = 0, 4 do
+				local p = cf:PointToWorldSpace(Vector3.new(side * b.X * 0.45, -b.Y * 0.2, -b.Z * 0.3 + k * b.Z * 0.15))
+				weld(root, Build.part({
+					Shape = Enum.PartType.Ball,
+					Size = Vector3.one * 0.2,
+					CFrame = CFrame.new(p),
+					Color = def.glowSpots,
+					Material = Enum.Material.Neon,
+				}, model))
+			end
+		end
+		local l = Instance.new("PointLight")
+		l.Color = def.glowSpots
+		l.Range = 8
+		l.Brightness = 1.5
+		l.Parent = root
 	end
 
 	-- legendary golden fish glows and sparkles
@@ -653,7 +718,7 @@ local function fishBrain(rec)
 					if def.bottom then
 						w = Vector3.new(w.X, floorAt(w.X, w.Z) + rng:NextNumber(2, 5), w.Z)
 					end
-					waypoint = clampGoal(w, 3, S - 4)
+					waypoint = clampGoal(w, 3, S - 4, rec.zone)
 				end
 				goal = waypoint
 				speed = def.speed
@@ -662,7 +727,7 @@ local function fishBrain(rec)
 		if def.bottom and not dashing then
 			goal = Vector3.new(goal.X, math.min(goal.Y, floorAt(goal.X, goal.Z) + 8), goal.Z)
 		end
-		steer(rec, clampGoal(goal, 3, S - 4), speed)
+		steer(rec, clampGoal(goal, 3, S - 4, rec.zone), speed)
 		task.wait(dashing and 0.05 or 0.15)
 	end
 end
@@ -691,7 +756,7 @@ local function crabBrain(rec)
 			target = home + right * math.sin(now * 0.4 + phase) * 6
 			speed = def.speed
 		end
-		target = Config.clampToLagoon(target, 20)
+		target = clampGoal(target, -1000, 1000, rec.zone)
 		rec.ap.Position = Vector3.new(target.X, floorAt(target.X, target.Z) + lift, target.Z)
 		rec.ap.MaxVelocity = speed
 		task.wait(0.2)
@@ -873,10 +938,10 @@ local function jellyBrain(rec)
 		local pos = rec.root.Position
 		local now = os.clock()
 		if (waypoint - pos).Magnitude < 3 then
-			waypoint = clampGoal(home + Vector3.new(rng:NextNumber(-25, 25), rng:NextNumber(-8, 8), rng:NextNumber(-25, 25)), 10, S - 8)
+			waypoint = clampGoal(home + Vector3.new(rng:NextNumber(-25, 25), rng:NextNumber(-8, 8), rng:NextNumber(-25, 25)), 10, S - 8, rec.zone)
 		end
 		local bob = Vector3.new(0, math.sin(now * 0.8 + phase) * 1.5, 0)
-		rec.ap.Position = clampGoal(waypoint + bob, 10, S - 6)
+		rec.ap.Position = clampGoal(waypoint + bob, 10, S - 6, rec.zone)
 		rec.ap.MaxVelocity = def.speed
 		rec.ao.CFrame = CFrame.Angles(math.sin(now * 0.5 + phase) * 0.12, 0, math.cos(now * 0.4 + phase) * 0.12)
 
@@ -899,6 +964,13 @@ local BRAINS = { Fish = fishBrain, Shark = sharkBrain, Squid = squidBrain, Jelly
 
 ---------------------------------------------------------------- spawning
 local function spawnPoint(def)
+	if def.zone == "Deep" then
+		local p = Config.randomInDeep(rng, 25)
+		if def.type == "Crab" or def.bottom then
+			return Vector3.new(p.X, floorAt(p.X, p.Z) + 0.6 * (def.size or 1), p.Z)
+		end
+		return p
+	end
 	if def.type == "Crab" then
 		local centres = Config.reefCenters()
 		local c = centres[rng:NextInteger(1, #centres)]
@@ -967,6 +1039,7 @@ function Creatures.spawn(kind)
 		bar = fill,
 		health = stats.health,
 		maxHealth = stats.health,
+		zone = def.zone,
 		stats = stats,
 		hurtAt = 0,
 		attacker = nil,
